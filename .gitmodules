@@ -1,0 +1,3 @@
+[submodule "transcribe-script"]
+	path = transcribe-script
+	url = .\\transcribe-script\\
