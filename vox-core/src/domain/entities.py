@@ -2,40 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
 from typing import Any
 
-# ==========================
-# Enums
-# ==========================
-
-
-class TaskStatus(str, Enum):
-    SUBMITTED = "SUBMITTED"
-    QUEUED = "QUEUED"
-    ASSIGNED = "ASSIGNED"
-    RUNNING = "RUNNING"
-    CANCEL_REQUESTED = "CANCEL_REQUESTED"
-    CANCELLED = "CANCELLED"
-    SUCCEEDED = "SUCCEEDED"
-    FAILED = "FAILED"
-    REQUEUED = "REQUEUED"
-
-
-class TaskAttemptStatus(str, Enum):
-    PENDING = "PENDING"
-    RUNNING = "RUNNING"
-    SUCCESS = "SUCCESS"
-    FAILED = "FAILED"
-    TIMED_OUT = "TIMED_OUT"
-    CANCELLED = "CANCELLED"
-
-
-class WorkerStatus(str, Enum):
-    IDLE = "IDLE"
-    BUSY = "BUSY"
-    OFFLINE = "OFFLINE"
-
+from src.domain.value_objects.enums import TaskAttemptStatus, TaskStatus, WorkerStatus
 
 # ==========================
 # Entidades
@@ -87,14 +56,20 @@ class Task:
         return self.attempts[-1] if self.attempts else None
 
     def create_attempt(self) -> TaskAttempt:
+        if self.id != None:
 
-        attempt = TaskAttempt(
-            id=None, task_id=self.id, worker_id=None, status=TaskAttemptStatus.PENDING
-        )
+            attempt = TaskAttempt(
+                id=None,
+                task_id=self.id,
+                worker_id=None,
+                status=TaskAttemptStatus.PENDING,
+            )
 
-        self.attempts.append(attempt)
+            self.attempts.append(attempt)
 
-        return attempt
+            return attempt
+
+        raise  # TODO execções
 
     def is_finished(self):
 
@@ -112,7 +87,9 @@ class Batch:
 
     id: str | None = None
 
-    tasks: list[Task] = field(default_factory=list)
+    tasks: list[Task] = field(
+        default_factory=list
+    )  # TODO: permitir nulo para checar se veio vazio do repositório ou realamente não tem tasks
 
     @property
     def completed_tasks(self):

@@ -134,10 +134,20 @@ def batch_to_model(batch: Batch) -> BatchModel:
 
 def model_to_batch(model: BatchModel) -> Batch:
     """Converte um BatchModel (ORM) para a entidade Batch do domínio."""
+
+    return Batch(
+        id=model.id,
+        created_at=model.created_at,
+        tasks=[],
+    )
+
+
+def model_to_batch_with_tasks(model: BatchModel) -> Batch:
+    """Converte um BatchModel (ORM) para a entidade Batch do domínio."""
     tasks = [model_to_task(task_model) for task_model in (model.tasks or [])]
 
     return Batch(
         id=model.id,
         created_at=model.created_at,
-        tasks=tasks,
+        tasks=[],
     )

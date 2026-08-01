@@ -3,6 +3,8 @@ from src.domain.entities import Batch, TaskAttempt, Task, Worker
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
 )
+from collections.abc import Sequence
+from src.domain.value_objects.enums import TaskStatus
 from src.infrastructure.persistence.models import (
     BatchModel,
     TaskAttemptModel,
@@ -12,13 +14,12 @@ from src.infrastructure.persistence.models import (
 
 import src.infrastructure.persistence.mappers as mappers
 
-from collections.abc import Sequence
 from typing import Callable, Generic, Type, TypeVar, cast
 
 from sqlalchemy import inspect, select
 from sqlalchemy.orm import InstanceState
 
-from src.domain.persistence.repository import IRepository
+import src.domain.interfaces.repositories as rc
 
 # entidade de domínio
 T = TypeVar("T")
@@ -28,7 +29,7 @@ M = TypeVar("M")
 ID = TypeVar("ID")
 
 
-class BaseRepository(IRepository[T, ID], Generic[T, M, ID]):
+class BaseRepository(rc.BaseRepository[T, ID], Generic[T, M, ID]):
 
     def __init__(
         self,
@@ -73,7 +74,7 @@ class BaseRepository(IRepository[T, ID], Generic[T, M, ID]):
             return None
         return self.to_domain(model)
 
-    async def list_all(self, limit: int = 100, offset: int = 0) -> Sequence[T]:
+    async def list_all(self, limit: int = 100, offset: int = 0) -> list[T]:
         stmt = select(self.model_cls).limit(limit).offset(offset)
         models = await self.session.scalars(stmt)
         models = models.all()
@@ -90,22 +91,46 @@ class TaskAttemptRepository(BaseRepository[TaskAttempt, TaskAttemptModel, int]):
         )
 
 
-class TaskRepository(BaseRepository[Task, TaskModel, str]):
+class TaskRepository(BaseRepository[Task, TaskModel, str], rc.TaskRepository):
     def __init__(self, session: AsyncSession):
         super().__init__(
             session, TaskModel, mappers.task_to_model, mappers.model_to_task
         )
 
+    async def get_by_status(self, status: TaskStatus, limit: int = 100) -> list[Task]:
+        """Recupera tarefas filtradas por status."""
+        ...
 
-class BatchRepository(BaseRepository[Batch, BatchModel, str]):
+    async def get_pending_tasks(self, limit: int = 50) -> list[Task]:
+        """Recupera tarefas prontas para serem escalonadas/executadas."""
+        ...
+
+    async def get_by_batch_id(self, batch_id: str) -> list[Task]:
+        """Recupera todas as tarefas associadas a um Lote (Batch)."""
+        ...
+
+
+class BatchRepository(BaseRepository[Batch, BatchModel, str], rc.BatchRepository):
     def __init__(self, session: AsyncSession):
         super().__init__(
             session, BatchModel, mappers.batch_to_model, mappers.model_to_batch
         )
 
+    async def get_with_tasks(self, batch_id: str) -> Batch | None:
+        """Carrega um Batch garantindo que suas Tasks associadas estejam preenchidas."""
+        pass
 
-class WorkerRepository(BaseRepository[Worker, WorkerModel, str]):
+
+class WorkerRepository(BaseRepository[Worker, WorkerModel, str], rc.WorkerRepository):
     def __init__(self, session: AsyncSession):
         super().__init__(
             session, WorkerModel, mappers.worker_to_model, mappers.model_to_worker
         )
+
+    async def get_available_workers(self) -> list[Worker]:
+        """Retorna trabalhadores em estado de disponibilidade (IDLE)."""
+        ...
+
+    async def get_stale_workers(self, timeout_seconds: int) -> list[Worker]:
+        """Retorna workers que não enviam heartbeat há mais tempo que o timeout."""
+        ...

@@ -14,7 +14,7 @@ from sqlalchemy.dialects.postgresql import ENUM as PG_ENUM
 
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
-from src.domain.entities import TaskStatus, TaskAttemptStatus, WorkerStatus
+from src.domain.value_objects.enums import TaskStatus, TaskAttemptStatus, WorkerStatus
 
 
 class Base(DeclarativeBase):
