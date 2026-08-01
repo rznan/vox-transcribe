@@ -1,3 +1,5 @@
+from sqlalchemy.orm.strategy_options import selectinload
+
 from src.domain.entities import Batch, TaskAttempt, Task, Worker
 
 from sqlalchemy.ext.asyncio import (
@@ -142,7 +144,14 @@ class BatchRepository(BaseRepository[Batch, BatchModel, str], rc.BatchRepository
 
     async def get_with_tasks(self, batch_id: str) -> Batch | None:
         """Carrega um Batch garantindo que suas Tasks associadas estejam preenchidas."""
-        pass
+        stmt = (
+            select(BatchModel)
+            .options(selectinload(BatchModel.tasks))
+            .where(BatchModel.id == batch_id)
+        )
+        model = (await self.session.execute(stmt)).scalar_one()
+
+        return mappers.model_to_batch_with_tasks(model)
 
 
 class WorkerRepository(BaseRepository[Worker, WorkerModel, str], rc.WorkerRepository):

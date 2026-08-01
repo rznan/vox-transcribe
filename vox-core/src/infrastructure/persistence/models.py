@@ -37,7 +37,7 @@ class BatchModel(Base):
     )
 
     tasks: Mapped[list["TaskModel"]] = relationship(
-        back_populates="batch", cascade="all, delete-orphan", lazy="selectin"
+        back_populates="batch", cascade="all, delete-orphan"
     )
 
 
