@@ -97,17 +97,41 @@ class TaskRepository(BaseRepository[Task, TaskModel, str], rc.TaskRepository):
             session, TaskModel, mappers.task_to_model, mappers.model_to_task
         )
 
-    async def get_by_status(self, status: TaskStatus, limit: int = 100) -> list[Task]:
+    async def get_by_status(
+        self, status: TaskStatus, limit: int = 100, offset=0
+    ) -> list[Task]:
         """Recupera tarefas filtradas por status."""
-        ...
+        stmt = (
+            select(TaskModel)
+            .limit(limit)
+            .offset(offset)
+            .where(TaskModel.status == status)
+        )
+        models = await self.session.scalars(stmt)
+        models = models.all()
+        return [self.to_domain(m) for m in models]
 
-    async def get_pending_tasks(self, limit: int = 50) -> list[Task]:
+    async def get_pending_tasks(self, limit: int = 50, offset=0) -> list[Task]:
         """Recupera tarefas prontas para serem escalonadas/executadas."""
-        ...
+        stmt = (
+            select(TaskModel)
+            .limit(limit)
+            .offset(offset)
+            .filter(
+                TaskModel.status.in_(
+                    [TaskStatus.SUBMITTED, TaskStatus.QUEUED, TaskStatus.REQUEUED]
+                )
+            )
+        )
+        models = await self.session.scalars(stmt)
+        models = models.all()
+        return [self.to_domain(m) for m in models] or []
 
     async def get_by_batch_id(self, batch_id: str) -> list[Task]:
         """Recupera todas as tarefas associadas a um Lote (Batch)."""
-        ...
+        stmt = select(TaskModel).where(TaskModel.batch_id == batch_id)
+        models = (await self.session.scalars(stmt)).all()
+        return [self.to_domain(m) for m in models]
 
 
 class BatchRepository(BaseRepository[Batch, BatchModel, str], rc.BatchRepository):
