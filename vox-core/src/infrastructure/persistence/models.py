@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from datetime import datetime
+from uuid import UUID, uuid4
 
-from sqlalchemy import JSON, DateTime, Enum, ForeignKey, Integer, String, JSON
+from sqlalchemy import JSON, DateTime, Enum, ForeignKey, Integer, String, JSON, Uuid
 
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -132,10 +133,7 @@ class WorkerModel(Base):
 
     __tablename__ = "workers"
 
-    id: Mapped[str] = mapped_column(
-        String(50),
-        primary_key=True,
-    )
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
 
     name: Mapped[str] = mapped_column(
         String(100),

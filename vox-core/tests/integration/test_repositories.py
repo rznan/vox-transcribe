@@ -3,6 +3,7 @@ import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 
+from uuid import UUID, uuid4
 from src.infrastructure.persistence.models import Base
 from src.domain.entities import Task, Batch, Worker, TaskStatus, WorkerStatus
 from src.infrastructure.persistence.repositories import (
@@ -111,8 +112,11 @@ async def test_get_tasks_by_status(async_session: AsyncSession):
 async def test_worker_repository(async_session: AsyncSession):
     worker_repo = WorkerRepository(async_session)
 
+    w1_id = uuid4()
+    w2_id = uuid4()
+
     w1 = Worker(
-        id="w-1",
+        id=w1_id,
         name="Worker Alpha",
         ip="127.0.0.1",
         port=8080,
@@ -120,7 +124,7 @@ async def test_worker_repository(async_session: AsyncSession):
         status=WorkerStatus.IDLE,
     )
     w2 = Worker(
-        id="w-2",
+        id=w2_id,
         name="Worker Beta",
         ip="127.0.0.2",
         port=8080,
@@ -133,4 +137,4 @@ async def test_worker_repository(async_session: AsyncSession):
 
     available = await worker_repo.get_available_workers()
     assert len(available) == 1
-    assert available[0].id == "w-1"
+    assert available[0].id == w1_id

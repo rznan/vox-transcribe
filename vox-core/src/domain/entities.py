@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
+from uuid import UUID
 from typing import Any
 
 from src.domain.value_objects.enums import TaskAttemptStatus, TaskStatus, WorkerStatus
@@ -100,7 +101,7 @@ class Batch:
 @dataclass(slots=True)
 class Worker:
 
-    id: str | None
+    id: UUID
 
     name: str
 
