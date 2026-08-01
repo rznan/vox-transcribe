@@ -2,6 +2,7 @@ import os
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
+from dotenv import load_dotenv
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -17,22 +18,27 @@ from src.infrastructure.persistence.models import Base
 class DatabaseConfig:
     """Configurações de conexão com o banco postgresql."""
 
-    def __init__(self) -> None:
+    def __init__(self, url: URL | None = None) -> None:
+        if url == None:
+            load_dotenv()
 
-        # TODO: adicionar no .env
-        driver = os.getenv("DB_DRIVER", "postgresql+asyncpg")
-        username = os.getenv("DB_USERNAME")
-        password = os.getenv("DB_PASSWORD")
-        database_name = os.getenv("DB_DATABASE_NAME")
-        host = os.getenv("DB_HOST")
+            driver = os.getenv("DB_DRIVER", "postgresql+asyncpg")
+            username = os.getenv("DB_USERNAME")
+            password = os.getenv("DB_PASSWORD")
+            database_name = os.getenv("DB_DATABASE_NAME")
+            host = os.getenv("DB_HOST")
+            port = int(os.getenv("DB_PORT", "5432")) or 5432
 
-        self.database_url = URL.create(
-            driver,
-            username=username,
-            password=password,
-            host=host,
-            database=database_name,
-        )
+            url = URL.create(
+                driver,
+                username=username,
+                password=password,
+                host=host,
+                port=port,
+                database=database_name,
+            )
+
+        self.database_url = url
 
 
 class Database:

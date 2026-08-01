@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from _typeshed import Self
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
@@ -46,12 +45,12 @@ class WorkerStatus(str, Enum):
 @dataclass(slots=True)
 class TaskAttempt:
 
-    id: int | None
     task_id: str
     worker_id: str | None
 
     status: TaskAttemptStatus
 
+    id: int | None = None
     started_at: datetime | None = None
     finished_at: datetime | None = None
 
@@ -67,8 +66,6 @@ class TaskAttempt:
 @dataclass(slots=True)
 class Task:
 
-    id: str
-
     batch_id: str
 
     status: TaskStatus
@@ -78,6 +75,8 @@ class Task:
     filename: str
 
     size: int
+
+    id: str | None = None
 
     result_text: str | None = None
 
@@ -109,9 +108,9 @@ class Task:
 @dataclass(slots=True)
 class Batch:
 
-    id: str
-
     created_at: datetime
+
+    id: str | None = None
 
     tasks: list[Task] = field(default_factory=list)
 
@@ -124,7 +123,7 @@ class Batch:
 @dataclass(slots=True)
 class Worker:
 
-    id: str
+    id: str | None
 
     name: str
 

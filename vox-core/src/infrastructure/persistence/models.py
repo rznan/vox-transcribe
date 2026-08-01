@@ -37,8 +37,7 @@ class BatchModel(Base):
     )
 
     tasks: Mapped[list["TaskModel"]] = relationship(
-        back_populates="batch",
-        cascade="all, delete-orphan",
+        back_populates="batch", cascade="all, delete-orphan", lazy="selectin"
     )
 
 
@@ -86,8 +85,11 @@ class TaskModel(Base):
     )
 
     attempts: Mapped[list["TaskAttemptModel"]] = relationship(
-        back_populates="task",
-        cascade="all, delete-orphan",
+        back_populates="task", cascade="all, delete-orphan", lazy="selectin"
+    )
+
+    batch: Mapped["BatchModel"] = relationship(
+        back_populates="tasks",
     )
 
 
@@ -124,6 +126,14 @@ class TaskAttemptModel(Base):
     finished_at: Mapped[datetime | None]
 
     logs: Mapped[str | None]
+
+    task: Mapped["TaskModel"] = relationship(
+        back_populates="attempts",
+    )
+
+    worker: Mapped["WorkerModel"] = relationship(
+        back_populates="attempts",
+    )
 
 
 class WorkerModel(Base):
@@ -175,4 +185,8 @@ class WorkerModel(Base):
         JSONB,  # TODO: rever
         default=list,
         nullable=False,
+    )
+
+    attempts: Mapped[list["TaskAttemptModel"]] = relationship(
+        back_populates="worker",
     )
