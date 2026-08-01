@@ -9,3 +9,9 @@ dependencies = [
     "python-dotenv>=1.2.2",
     "sqlalchemy>=2.0.51",
 ]
+
+[dependency-groups]
+dev = [
+    "aiosqlite>=0.22.1",
+    "pytest-asyncio>=1.4.0",
+]

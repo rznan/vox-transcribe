@@ -2,15 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import (
-    DateTime,
-    ForeignKey,
-    Integer,
-    String,
-)
-
-from sqlalchemy.dialects.postgresql import INET, JSONB
-from sqlalchemy.dialects.postgresql import ENUM as PG_ENUM
+from sqlalchemy import JSON, DateTime, Enum, ForeignKey, Integer, String, JSON
 
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -56,13 +48,13 @@ class TaskModel(Base):
     )
 
     status: Mapped[TaskStatus] = mapped_column(
-        PG_ENUM(TaskStatus, name="task_status"),
+        Enum(TaskStatus),
         nullable=False,
         default=TaskStatus.SUBMITTED,
     )
 
     artifact: Mapped[dict] = mapped_column(
-        JSONB,
+        JSON,
         nullable=False,
     )
 
@@ -113,7 +105,7 @@ class TaskAttemptModel(Base):
     )
 
     status: Mapped[TaskAttemptStatus] = mapped_column(
-        PG_ENUM(TaskAttemptStatus, name="task_attempt_status"),
+        Enum(TaskAttemptStatus),
         nullable=False,
     )
 
@@ -150,8 +142,8 @@ class WorkerModel(Base):
         nullable=False,
     )
 
-    ip: Mapped[INET] = mapped_column(
-        INET,
+    ip: Mapped[str] = mapped_column(
+        String(45),
         nullable=False,
     )
 
@@ -166,7 +158,7 @@ class WorkerModel(Base):
     )
 
     status: Mapped[WorkerStatus] = mapped_column(  # TODO: avaliar remover
-        PG_ENUM(WorkerStatus, name="worker_status"),
+        Enum(WorkerStatus),
         default=WorkerStatus.IDLE,
         nullable=False,
     )
@@ -182,7 +174,7 @@ class WorkerModel(Base):
     )
 
     languages_supported: Mapped[list[str]] = mapped_column(
-        JSONB,  # TODO: rever
+        JSON,
         default=list,
         nullable=False,
     )
