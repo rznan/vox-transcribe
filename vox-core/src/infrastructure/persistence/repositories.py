@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import (
     AsyncSession,
 )
 from collections.abc import Sequence
-from src.domain.value_objects.enums import TaskStatus
+from src.domain.value_objects.enums import TaskStatus, WorkerStatus
 from src.infrastructure.persistence.models import (
     BatchModel,
     TaskAttemptModel,
@@ -162,8 +162,12 @@ class WorkerRepository(BaseRepository[Worker, WorkerModel, str], rc.WorkerReposi
 
     async def get_available_workers(self) -> list[Worker]:
         """Retorna trabalhadores em estado de disponibilidade (IDLE)."""
-        ...
+        stmt = select(WorkerModel).where(WorkerModel.status == WorkerStatus.IDLE)
+        models = (await self.session.scalars(stmt)).all()
+        return [self.to_domain(m) for m in models]
 
     async def get_stale_workers(self, timeout_seconds: int) -> list[Worker]:
         """Retorna workers que não enviam heartbeat há mais tempo que o timeout."""
-        ...
+        stmt = select(WorkerModel).where(WorkerModel.status == WorkerStatus.OFFLINE)
+        models = (await self.session.scalars(stmt)).all()
+        return [self.to_domain(m) for m in models]
