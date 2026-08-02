@@ -4,6 +4,9 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from uuid import UUID
 from typing import Any
+from uuid import UUID
+
+from sqlalchemy import Uuid
 
 from src.domain.value_objects.enums import TaskAttemptStatus, TaskStatus, WorkerStatus
 
@@ -36,8 +39,6 @@ class TaskAttempt:
 @dataclass(slots=True)
 class Task:
 
-    batch_id: str
-
     status: TaskStatus
 
     artifact: dict[str, Any]  # TODO: avaliar remover
@@ -45,6 +46,8 @@ class Task:
     filename: str
 
     size: int
+
+    batch_id: int | None = None
 
     id: str | None = None
 
@@ -86,7 +89,7 @@ class Batch:
 
     created_at: datetime
 
-    id: str | None = None
+    id: int | None = None
 
     tasks: list[Task] = field(
         default_factory=list

@@ -25,6 +25,8 @@ def task_to_model(task: Task) -> TaskModel:
         result_text=task.result_text,
         attempts=[task_attempt_to_model(attempt) for attempt in task.attempts],
     )
+    if task.batch_id is not None:
+        model.batch_id = task.batch_id
     return model
 
 
@@ -124,11 +126,15 @@ def model_to_task_attempt(model: TaskAttemptModel) -> TaskAttempt:
 
 def batch_to_model(batch: Batch) -> BatchModel:
     """Converte uma entidade Batch do domínio para BatchModel (ORM)."""
+
     model = BatchModel(
-        id=batch.id,
         created_at=batch.created_at,
         tasks=[task_to_model(task) for task in batch.tasks],
     )
+
+    if batch.id is not None:
+        model.id = batch.id
+
     return model
 
 

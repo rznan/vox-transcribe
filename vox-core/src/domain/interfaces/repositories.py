@@ -74,10 +74,10 @@ class WorkerRepository(BaseRepository[Worker, str]):
         pass
 
 
-class BatchRepository(BaseRepository[Batch, str]):
+class BatchRepository(BaseRepository[Batch, int]):
     """Contrato de persistência especializado para Batches."""
 
     @abstractmethod
-    async def get_with_tasks(self, batch_id: str) -> Optional[Batch]:
+    async def get_with_tasks(self, batch_id: int) -> Optional[Batch]:
         """Carrega um Batch garantindo que suas Tasks associadas estejam preenchidas."""
         pass

@@ -136,13 +136,13 @@ class TaskRepository(BaseRepository[Task, TaskModel, str], rc.TaskRepository):
         return [self.to_domain(m) for m in models]
 
 
-class BatchRepository(BaseRepository[Batch, BatchModel, str], rc.BatchRepository):
+class BatchRepository(BaseRepository[Batch, BatchModel, int], rc.BatchRepository):
     def __init__(self, session: AsyncSession):
         super().__init__(
             session, BatchModel, mappers.batch_to_model, mappers.model_to_batch
         )
 
-    async def get_with_tasks(self, batch_id: str) -> Batch | None:
+    async def get_with_tasks(self, batch_id: int) -> Batch | None:
         """Carrega um Batch garantindo que suas Tasks associadas estejam preenchidas."""
         stmt = (
             select(BatchModel)

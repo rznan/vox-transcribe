@@ -18,10 +18,7 @@ class BatchModel(Base):
 
     __tablename__ = "batches"
 
-    id: Mapped[str] = mapped_column(
-        String(50),
-        primary_key=True,
-    )
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -43,7 +40,7 @@ class TaskModel(Base):
         primary_key=True,
     )
 
-    batch_id: Mapped[str] = mapped_column(
+    batch_id: Mapped[int] = mapped_column(
         ForeignKey("batches.id", ondelete="CASCADE"),
         nullable=False,
     )
