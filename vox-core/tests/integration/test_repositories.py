@@ -49,7 +49,6 @@ async def test_add_and_get_task(async_session: AsyncSession):
 
     # 2. Cria Entidade Task
     task = Task(
-        id="task-100",
         batch_id=result.id,
         status=TaskStatus.SUBMITTED,
         artifact={"cmd": "echo hello"},
@@ -59,12 +58,12 @@ async def test_add_and_get_task(async_session: AsyncSession):
 
     # 3. Executa a Inserção via Repositório
     saved_task = await task_repo.add(task)
-    assert saved_task.id == "task-100"
+    assert saved_task.id == 1
 
     # 4. Busca a Task pelo ID
-    retrieved_task = await task_repo.get_by_id("task-100")
+    retrieved_task = await task_repo.get_by_id(saved_task.id)
     assert retrieved_task is not None
-    assert retrieved_task.id == "task-100"
+    assert retrieved_task.id == 1
     assert retrieved_task.status == TaskStatus.SUBMITTED
     assert retrieved_task.artifact == {"cmd": "echo hello"}
 
@@ -79,7 +78,6 @@ async def test_add_with_insertion_from_batch(async_session: AsyncSession):
 
     # 2. Cria Entidade Task
     task = Task(
-        id="task-100",
         status=TaskStatus.SUBMITTED,
         artifact={"cmd": "echo hello"},
         filename="input.txt",
@@ -89,12 +87,13 @@ async def test_add_with_insertion_from_batch(async_session: AsyncSession):
     batch.tasks.append(task)
 
     # 3. Executa a Inserção via Repositório
-    await batch_repo.add(batch)
+    saved_batch = await batch_repo.add(batch)
+    assert saved_batch.id == 1
 
     # 4. Busca a Task pelo ID
-    retrieved_task = await task_repo.get_by_id("task-100")
+    retrieved_task = (await task_repo.get_by_batch_id(1)).pop()
     assert retrieved_task is not None
-    assert retrieved_task.id == "task-100"
+    assert retrieved_task.id == 1
     assert retrieved_task.status == TaskStatus.SUBMITTED
     assert retrieved_task.artifact == {"cmd": "echo hello"}
 
@@ -109,7 +108,6 @@ async def test_get_tasks_by_status(async_session: AsyncSession):
     assert batch.id != None
 
     t1 = Task(
-        id="task-1",
         batch_id=batch.id,
         status=TaskStatus.SUBMITTED,
         artifact={},
@@ -117,7 +115,6 @@ async def test_get_tasks_by_status(async_session: AsyncSession):
         size=200,
     )
     t2 = Task(
-        id="task-2",
         batch_id=batch.id,
         status=TaskStatus.RUNNING,
         artifact={},
@@ -125,7 +122,6 @@ async def test_get_tasks_by_status(async_session: AsyncSession):
         size=201,
     )
     t3 = Task(
-        id="task-3",
         batch_id=batch.id,
         status=TaskStatus.SUBMITTED,
         artifact={},
@@ -133,13 +129,16 @@ async def test_get_tasks_by_status(async_session: AsyncSession):
         size=202,
     )
 
-    await task_repo.add(t1)
-    await task_repo.add(t2)
-    await task_repo.add(t3)
+    r_t1 = await task_repo.add(t1)
+    r_t2 = await task_repo.add(t2)
+    r_t3 = await task_repo.add(t3)
+
+    assert r_t1.id != None
+    assert r_t3.id != None
 
     pending_tasks = await task_repo.get_by_status(TaskStatus.SUBMITTED)
     assert len(pending_tasks) == 2
-    assert {t.id for t in pending_tasks} == {"task-1", "task-3"}
+    assert {t.id for t in pending_tasks} == {r_t1.id, r_t3.id}
 
 
 @pytest.mark.asyncio

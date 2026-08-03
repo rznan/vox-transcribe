@@ -39,7 +39,7 @@ class BaseRepository(ABC, Generic[T, ID]):
         pass
 
 
-class TaskRepository(BaseRepository[Task, str]):
+class TaskRepository(BaseRepository[Task, int]):
     """Contrato de persistência especializado para Tasks."""
 
     @abstractmethod
@@ -55,7 +55,7 @@ class TaskRepository(BaseRepository[Task, str]):
         pass
 
     @abstractmethod
-    async def get_by_batch_id(self, batch_id: str) -> Sequence[Task]:
+    async def get_by_batch_id(self, batch_id: int) -> Sequence[Task]:
         """Recupera todas as tarefas associadas a um Lote (Batch)."""
         pass
 

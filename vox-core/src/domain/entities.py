@@ -4,7 +4,6 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from uuid import UUID
 from typing import Any
-from uuid import UUID
 
 from sqlalchemy import Uuid
 
@@ -18,7 +17,7 @@ from src.domain.value_objects.enums import TaskAttemptStatus, TaskStatus, Worker
 @dataclass(slots=True)
 class TaskAttempt:
 
-    task_id: str
+    task_id: int
     worker_id: str | None
 
     status: TaskAttemptStatus
@@ -49,7 +48,7 @@ class Task:
 
     batch_id: int | None = None
 
-    id: str | None = None
+    id: int | None = None
 
     result_text: str | None = None
 

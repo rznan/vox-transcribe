@@ -93,7 +93,7 @@ class TaskAttemptRepository(BaseRepository[TaskAttempt, TaskAttemptModel, int]):
         )
 
 
-class TaskRepository(BaseRepository[Task, TaskModel, str], rc.TaskRepository):
+class TaskRepository(BaseRepository[Task, TaskModel, int], rc.TaskRepository):
     def __init__(self, session: AsyncSession):
         super().__init__(
             session, TaskModel, mappers.task_to_model, mappers.model_to_task
@@ -129,7 +129,7 @@ class TaskRepository(BaseRepository[Task, TaskModel, str], rc.TaskRepository):
         models = models.all()
         return [self.to_domain(m) for m in models] or []
 
-    async def get_by_batch_id(self, batch_id: str) -> list[Task]:
+    async def get_by_batch_id(self, batch_id: int) -> list[Task]:
         """Recupera todas as tarefas associadas a um Lote (Batch)."""
         stmt = select(TaskModel).where(TaskModel.batch_id == batch_id)
         models = (await self.session.scalars(stmt)).all()

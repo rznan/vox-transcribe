@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+
 from uuid import UUID, uuid4
 
 from sqlalchemy import JSON, DateTime, Enum, ForeignKey, Integer, String, JSON, Uuid
@@ -35,10 +36,7 @@ class TaskModel(Base):
 
     __tablename__ = "tasks"
 
-    id: Mapped[str] = mapped_column(
-        String(50),
-        primary_key=True,
-    )
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
 
     batch_id: Mapped[int] = mapped_column(
         ForeignKey("batches.id", ondelete="CASCADE"),
@@ -93,7 +91,7 @@ class TaskAttemptModel(Base):
         autoincrement=True,
     )
 
-    task_id: Mapped[str] = mapped_column(
+    task_id: Mapped[int] = mapped_column(
         ForeignKey("tasks.id", ondelete="CASCADE"),
         nullable=False,
     )

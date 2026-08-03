@@ -16,7 +16,6 @@ from src.infrastructure.persistence.models import (
 def task_to_model(task: Task) -> TaskModel:
     """Converte uma entidade Task do domínio para TaskModel (ORM)."""
     model = TaskModel(
-        id=task.id,
         batch_id=task.batch_id,
         status=task.status,
         artifact=task.artifact,
@@ -25,8 +24,13 @@ def task_to_model(task: Task) -> TaskModel:
         result_text=task.result_text,
         attempts=[task_attempt_to_model(attempt) for attempt in task.attempts],
     )
+
+    if task.id is not None:
+        model.id = task.id
+
     if task.batch_id is not None:
         model.batch_id = task.batch_id
+
     return model
 
 
@@ -92,13 +96,15 @@ def model_to_worker(model: WorkerModel) -> Worker:
 def task_attempt_to_model(attempt: TaskAttempt) -> TaskAttemptModel:
     """Converte uma entidade TaskAttempt do domínio para TaskAttemptModel (ORM)."""
     model = TaskAttemptModel(
-        task_id=attempt.task_id,
         worker_id=attempt.worker_id,
         status=attempt.status,
         started_at=attempt.started_at,
         finished_at=attempt.finished_at,
         logs=attempt.logs,
     )
+
+    if attempt.task_id is not None:
+        model.task_id = attempt.task_id
 
     if attempt.id is not None:
         model.id = attempt.id
