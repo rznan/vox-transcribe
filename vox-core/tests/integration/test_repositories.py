@@ -45,11 +45,9 @@ async def test_add_and_get_task(async_session: AsyncSession):
     batch = Batch(created_at=datetime.now(timezone.utc))
     result = await batch_repo.add(batch)
 
-    assert result.id != None
-
     # 2. Cria Entidade Task
     task = Task(
-        batch_id=result.id,
+        _batch_id=result.id,
         status=TaskStatus.SUBMITTED,
         artifact={"cmd": "echo hello"},
         filename="input.txt",
@@ -105,24 +103,22 @@ async def test_get_tasks_by_status(async_session: AsyncSession):
 
     batch = await batch_repo.add(Batch(created_at=datetime.now(timezone.utc)))
 
-    assert batch.id != None
-
     t1 = Task(
-        batch_id=batch.id,
+        _batch_id=batch.id,
         status=TaskStatus.SUBMITTED,
         artifact={},
         filename="a1.wav",
         size=200,
     )
     t2 = Task(
-        batch_id=batch.id,
+        _batch_id=batch.id,
         status=TaskStatus.RUNNING,
         artifact={},
         filename="a2.wav",
         size=201,
     )
     t3 = Task(
-        batch_id=batch.id,
+        _batch_id=batch.id,
         status=TaskStatus.SUBMITTED,
         artifact={},
         filename="a3.wav",
@@ -132,9 +128,6 @@ async def test_get_tasks_by_status(async_session: AsyncSession):
     r_t1 = await task_repo.add(t1)
     r_t2 = await task_repo.add(t2)
     r_t3 = await task_repo.add(t3)
-
-    assert r_t1.id != None
-    assert r_t3.id != None
 
     pending_tasks = await task_repo.get_by_status(TaskStatus.SUBMITTED)
     assert len(pending_tasks) == 2

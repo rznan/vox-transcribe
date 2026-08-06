@@ -16,7 +16,6 @@ from src.infrastructure.persistence.models import (
 def task_to_model(task: Task) -> TaskModel:
     """Converte uma entidade Task do domínio para TaskModel (ORM)."""
     model = TaskModel(
-        batch_id=task.batch_id,
         status=task.status,
         artifact=task.artifact,
         filename=task.filename,
@@ -25,11 +24,11 @@ def task_to_model(task: Task) -> TaskModel:
         attempts=[task_attempt_to_model(attempt) for attempt in task.attempts],
     )
 
-    if task.id is not None:
-        model.id = task.id
+    if task._id is not None:
+        model.id = task._id
 
-    if task.batch_id is not None:
-        model.batch_id = task.batch_id
+    if task._batch_id is not None:
+        model.batch_id = task._batch_id
 
     return model
 
@@ -41,8 +40,8 @@ def model_to_task(model: TaskModel) -> Task:
     ]
 
     return Task(
-        id=model.id,
-        batch_id=model.batch_id,
+        _id=model.id,
+        _batch_id=model.batch_id,
         status=model.status,
         artifact=model.artifact,
         filename=model.filename,
@@ -106,8 +105,8 @@ def task_attempt_to_model(attempt: TaskAttempt) -> TaskAttemptModel:
     if attempt.task_id is not None:
         model.task_id = attempt.task_id
 
-    if attempt.id is not None:
-        model.id = attempt.id
+    if attempt._id is not None:
+        model.id = attempt._id
 
     return model
 
@@ -115,7 +114,7 @@ def task_attempt_to_model(attempt: TaskAttempt) -> TaskAttemptModel:
 def model_to_task_attempt(model: TaskAttemptModel) -> TaskAttempt:
     """Converte um TaskAttemptModel (ORM) para a entidade TaskAttempt do domínio."""
     return TaskAttempt(
-        id=model.id,
+        _id=model.id,
         task_id=model.task_id,
         worker_id=model.worker_id,
         status=model.status,
@@ -138,8 +137,8 @@ def batch_to_model(batch: Batch) -> BatchModel:
         tasks=[task_to_model(task) for task in batch.tasks],
     )
 
-    if batch.id is not None:
-        model.id = batch.id
+    if batch._id is not None:
+        model.id = batch._id
 
     return model
 
@@ -148,7 +147,7 @@ def model_to_batch(model: BatchModel) -> Batch:
     """Converte um BatchModel (ORM) para a entidade Batch do domínio."""
 
     return Batch(
-        id=model.id,
+        _id=model.id,
         created_at=model.created_at,
         tasks=[],
     )
@@ -158,4 +157,4 @@ def model_to_batch_with_tasks(model: BatchModel) -> Batch:
     """Converte um BatchModel (ORM) para a entidade Batch do domínio."""
     tasks = [model_to_task(task_model) for task_model in (model.tasks or [])]
 
-    return Batch(id=model.id, created_at=model.created_at, tasks=tasks)
+    return Batch(_id=model.id, created_at=model.created_at, tasks=tasks)

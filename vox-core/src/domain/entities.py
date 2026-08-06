@@ -5,8 +5,6 @@ from datetime import datetime
 from uuid import UUID
 from typing import Any
 
-from sqlalchemy import Uuid
-
 from src.domain.value_objects.enums import TaskAttemptStatus, TaskStatus, WorkerStatus
 
 # ==========================
@@ -22,7 +20,7 @@ class TaskAttempt:
 
     status: TaskAttemptStatus
 
-    id: int | None = None
+    _id: int | None = None
     started_at: datetime | None = None
     finished_at: datetime | None = None
 
@@ -33,6 +31,12 @@ class TaskAttempt:
         if self.started_at and self.finished_at:
             return self.finished_at - self.started_at
         return None
+
+    @property
+    def id(self) -> int:
+        if self.id == None:
+            raise ValueError("Tentativa de acessar o id de uma Task não persistida.")
+        return self.id
 
 
 @dataclass(slots=True)
@@ -46,9 +50,9 @@ class Task:
 
     size: int
 
-    batch_id: int | None = None
+    _batch_id: int | None = None
 
-    id: int | None = None
+    _id: int | None = None
 
     result_text: str | None = None
 
@@ -58,11 +62,23 @@ class Task:
     def current_attempt(self):
         return self.attempts[-1] if self.attempts else None
 
+    @property
+    def id(self) -> int:
+        if self._id == None:
+            raise ValueError("Tentativa de acessar o id de uma Task não persistida.")
+        return self._id
+
+    @property
+    def batch_id(self) -> int:
+        if self._batch_id == None:
+            raise ValueError("Tentativa de acessar o id de uma Task não persistida.")
+        return self._batch_id
+
     def create_attempt(self) -> TaskAttempt:
         if self.id != None:
 
             attempt = TaskAttempt(
-                id=None,
+                _id=None,
                 task_id=self.id,
                 worker_id=None,
                 status=TaskAttemptStatus.PENDING,
@@ -88,7 +104,7 @@ class Batch:
 
     created_at: datetime
 
-    id: int | None = None
+    _id: int | None = None
 
     tasks: list[Task] = field(
         default_factory=list
@@ -96,8 +112,13 @@ class Batch:
 
     @property
     def completed_tasks(self):
-
         return sum(task.is_finished() for task in self.tasks)
+
+    @property
+    def id(self) -> int:
+        if self._id == None:
+            raise ValueError("Tentativa de acessar o id de uma Task não persistida.")
+        return self._id
 
 
 @dataclass(slots=True)
