@@ -12,15 +12,6 @@ class QueueMismatchError(Exception):
         super().__init__(self.message)
 
 
-class BatchCompletedError(Exception):
-    """Lançada quando há a tentativa de obter uma tarefa não processada de um batch sem tarefas não processadas"""
-
-    def __init__(self, batch_id: int) -> None:
-        self.batch_id = batch_id
-        self.message = f"O batch {batch_id} não apresenta tarefas não processadas"
-        super().__init__(self.message)
-
-
 class TaskQueue:
 
     def __init__(self, batch: Batch) -> None:
@@ -33,45 +24,37 @@ class TaskQueue:
             if task.id != None:
                 self.items[task.id] = task
 
-    def get(self):
+    def dequeue(self) -> Task:
         return self.queue.popleft()
 
-    def put(self, task_id: int):
-        item_task = self.items[task_id]
-
-        if item_task == None:
+    def enqueue(self, task_id: int) -> None:
+        item_task: Task
+        try:
+            item_task = self.items[task_id]
+        except KeyError:
             raise QueueMismatchError(task_id, self.batch.id)
-        self.queue.append(item_task)
+
+        if item_task not in self.queue:
+            self.queue.append(item_task)
 
 
-class BatchQueue:
+class BatchCircularQueue:
 
     def __init__(self) -> None:
         self.queue: deque[TaskQueue] = deque()
         self.items: dict[int, TaskQueue] = dict()
+        self.length: int = 0
 
-    def put(self, batch: Batch):
+    def enqueue(self, batch: Batch):
         tq = TaskQueue(batch)
         self.items[batch.id] = tq
         self.queue.append(tq)
+        self.length += 1
 
-    def getTask(self) -> Task:
-        tq = self.queue[0]
-        task = tq.get()
+    def dequeue(self) -> TaskQueue:
+        return self.queue.popleft()
 
-        if task == None and tq.batch.completed_tasks == tq.length:
-            self.queue.pop()
-            raise BatchCompletedError(tq.batch.id)
-
-        self.queue.rotate(-1)
-
-        return task
-
-    def requeueTask(self, batch_id: int, task_id: int):
-        tq = self.items[batch_id]
-        tq.put(task_id)
-
-    def removeBatch(self, batch_id: int):
+    def remove(self, batch_id: int):
         for tq in self.queue:
             if tq.batch.id == batch_id:
                 self.queue.remove(tq)
