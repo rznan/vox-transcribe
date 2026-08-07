@@ -3,13 +3,18 @@ from src.domain.entities import Batch, Task
 
 
 class QueueMismatchError(Exception):
-    """Lançada quando uma tarefa tenta ser inserida na fila errada"""
+    """Lançada quando uma tarefa tenta ser inserida na fila errada."""
 
     def __init__(self, task_id: int, batch_id: int) -> None:
         self.task_id = task_id
         self.batch_id = batch_id
-        self.message = f"A tarefa {task_id} não pertence ao batch {batch_id}"
-        super().__init__(self.message)
+        super().__init__(f"A tarefa {task_id} não pertence ao batch {batch_id}")
+
+
+class QueueEmptyError(Exception):
+    """Lançada quando tenta-se remover um item de uma fila vazia."""
+
+    pass
 
 
 class TaskQueue:
@@ -17,45 +22,70 @@ class TaskQueue:
     def __init__(self, batch: Batch) -> None:
         self.batch = batch
         self.queue: deque[Task] = deque(batch.tasks)
-        self.items: dict[int, Task] = dict()
-        self.length = batch.tasks.__len__()
 
-        for task in batch.tasks:
-            if task.id != None:
-                self.items[task.id] = task
+        self.items: dict[int, Task] = {
+            task.id: task for task in batch.tasks if task.id is not None
+        }
+
+        # Cache para busca O(1) na hora de evitar duplicatas
+        self._queued_task_ids: set[int] = {
+            task.id for task in batch.tasks if task.id is not None
+        }
+
+    def __len__(self) -> int:
+        """Permite usar a função nativa len() na classe."""
+        return len(self.queue)
 
     def dequeue(self) -> Task:
-        return self.queue.popleft()
+        try:
+            task = self.queue.popleft()
+            self._queued_task_ids.remove(task.id)
+            return task
+        except IndexError:
+            raise QueueEmptyError(f"A fila do batch {self.batch.id} está vazia.")
 
     def enqueue(self, task_id: int) -> None:
-        item_task: Task
-        try:
-            item_task = self.items[task_id]
-        except KeyError:
+        if task_id not in self.items:
             raise QueueMismatchError(task_id, self.batch.id)
 
-        if item_task not in self.queue:
-            self.queue.append(item_task)
+        if task_id not in self._queued_task_ids:
+            task = self.items[task_id]
+            self.queue.append(task)
+            self._queued_task_ids.add(task_id)
 
 
 class BatchCircularQueue:
 
     def __init__(self) -> None:
         self.queue: deque[TaskQueue] = deque()
-        self.items: dict[int, TaskQueue] = dict()
-        self.length: int = 0
+        self.items: dict[int, TaskQueue] = {}
+        self._removed_batch_ids: set[int] = set()
 
-    def enqueue(self, batch: Batch):
+    def __len__(self) -> int:
+        return len(self.items)
+
+    def put(self, batch: Batch) -> None:
         tq = TaskQueue(batch)
         self.items[batch.id] = tq
         self.queue.append(tq)
-        self.length += 1
+        self._removed_batch_ids.discard(batch.id)
 
-    def dequeue(self) -> TaskQueue:
-        return self.queue.popleft()
+    def get(self) -> TaskQueue:
+        while True:
+            try:
+                tq = self.queue[0]
+            except IndexError:
+                raise QueueEmptyError("A fila de batches está vazia.")
 
-    def remove(self, batch_id: int):
-        for tq in self.queue:
-            if tq.batch.id == batch_id:
-                self.queue.remove(tq)
-                break
+            if tq.batch.id in self._removed_batch_ids:
+                self._removed_batch_ids.remove(tq.batch.id)
+                self.queue.popleft()
+                continue
+
+            self.queue.rotate(-1)
+            return tq
+
+    def remove(self, batch_id: int) -> None:
+        if batch_id in self.items:
+            self._removed_batch_ids.add(batch_id)
+            del self.items[batch_id]
