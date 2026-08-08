@@ -59,16 +59,17 @@ class BatchCircularQueue:
     def __init__(self) -> None:
         self.queue: deque[TaskQueue] = deque()
         self.items: dict[int, TaskQueue] = {}
-        self._removed_batch_ids: set[int] = set()
+        self._queued_batch_ids: set[int] = set()
 
     def __len__(self) -> int:
         return len(self.items)
 
     def put(self, batch: Batch) -> None:
-        tq = TaskQueue(batch)
-        self.items[batch.id] = tq
-        self.queue.append(tq)
-        self._removed_batch_ids.discard(batch.id)
+        if batch.id not in self._queued_batch_ids:
+            tq = TaskQueue(batch)
+            self.items[batch.id] = tq
+            self.queue.append(tq)
+            self._queued_batch_ids.add(batch.id)
 
     def get(self) -> TaskQueue:
         while True:
@@ -77,8 +78,7 @@ class BatchCircularQueue:
             except IndexError:
                 raise QueueEmptyError("A fila de batches está vazia.")
 
-            if tq.batch.id in self._removed_batch_ids:
-                self._removed_batch_ids.remove(tq.batch.id)
+            if tq.batch.id not in self._queued_batch_ids:
                 self.queue.popleft()
                 continue
 
@@ -86,6 +86,6 @@ class BatchCircularQueue:
             return tq
 
     def remove(self, batch_id: int) -> None:
-        if batch_id in self.items:
-            self._removed_batch_ids.add(batch_id)
+        if batch_id in self._queued_batch_ids:
+            self._queued_batch_ids.remove(batch_id)
             del self.items[batch_id]
