@@ -54,7 +54,7 @@ class TaskQueue:
             self._queued_task_ids.add(task_id)
 
 
-class BatchCircularQueue:
+class BatchCircularList:
 
     def __init__(self) -> None:
         self.queue: deque[TaskQueue] = deque()
@@ -64,14 +64,14 @@ class BatchCircularQueue:
     def __len__(self) -> int:
         return len(self.items)
 
-    def put(self, batch: Batch) -> None:
+    def append(self, batch: Batch) -> None:
         if batch.id not in self._queued_batch_ids:
             tq = TaskQueue(batch)
             self.items[batch.id] = tq
             self.queue.append(tq)
             self._queued_batch_ids.add(batch.id)
 
-    def get(self) -> TaskQueue:
+    def getNext(self) -> TaskQueue:
         while True:
             try:
                 tq = self.queue[0]

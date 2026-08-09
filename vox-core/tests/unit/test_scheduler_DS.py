@@ -3,8 +3,8 @@ import pytest
 
 from src.domain.entities import Batch, Task
 from src.domain.value_objects.enums import TaskStatus
-from src.application.scheduler.queues import (
-    BatchCircularQueue,
+from src.application.scheduler.data_strutures import (
+    BatchCircularList,
     QueueMismatchError,
     QueueEmptyError,
     TaskQueue,
@@ -36,9 +36,9 @@ def task_queue(sample_batch: Batch) -> TaskQueue:
 
 
 @pytest.fixture
-def batch_circular_queue(sample_batch: Batch) -> BatchCircularQueue:
-    queue = BatchCircularQueue()
-    queue.put(sample_batch)
+def batch_circular_queue(sample_batch: Batch) -> BatchCircularList:
+    queue = BatchCircularList()
+    queue.append(sample_batch)
     return queue
 
 
@@ -94,50 +94,50 @@ class TestTaskQueue:
 class TestBatchCircularQueue:
 
     def test_iniitalization_sets_correct_length_and_items(
-        self, batch_circular_queue: BatchCircularQueue, sample_batch: Batch
+        self, batch_circular_queue: BatchCircularList, sample_batch: Batch
     ):
         assert len(batch_circular_queue) == 1
         assert batch_circular_queue.items[0].batch == sample_batch
 
     def test_get_returns_first_batch(
-        self, batch_circular_queue: BatchCircularQueue, sample_batch: Batch
+        self, batch_circular_queue: BatchCircularList, sample_batch: Batch
     ):
-        retrieved_task_queue = batch_circular_queue.get()
+        retrieved_task_queue = batch_circular_queue.getNext()
         assert retrieved_task_queue.batch == sample_batch
 
     def test_remove_updates_queued_set(
-        self, batch_circular_queue: BatchCircularQueue, sample_batch: Batch
+        self, batch_circular_queue: BatchCircularList, sample_batch: Batch
     ):
         batch_circular_queue.remove(sample_batch.id)
         assert sample_batch.id not in batch_circular_queue._queued_batch_ids
 
     def test_remove_updates_the_length_correctly(
-        self, batch_circular_queue: BatchCircularQueue, sample_batch: Batch
+        self, batch_circular_queue: BatchCircularList, sample_batch: Batch
     ):
         batch_circular_queue.remove(sample_batch.id)
         assert len(batch_circular_queue) == 0
 
     def test_dequeue_on_empty_queue_raises_error(
-        self, batch_circular_queue: BatchCircularQueue, sample_batch: Batch
+        self, batch_circular_queue: BatchCircularList, sample_batch: Batch
     ):
         batch_circular_queue.remove(sample_batch.id)
 
         with pytest.raises(QueueEmptyError):
-            batch_circular_queue.get()
+            batch_circular_queue.getNext()
 
     def test_batch_not_in_set_is_removed_when_attempted_to_get(
-        self, batch_circular_queue: BatchCircularQueue, sample_batch: Batch
+        self, batch_circular_queue: BatchCircularList, sample_batch: Batch
     ):
         batch_circular_queue.remove(sample_batch.id)
         try:
-            batch_circular_queue.get()
+            batch_circular_queue.getNext()
         except:
             pass
 
         assert len(batch_circular_queue.queue) == 0
 
     def test_duplicate_batch_is_ignored(
-        self, batch_circular_queue: BatchCircularQueue, sample_batch: Batch
+        self, batch_circular_queue: BatchCircularList, sample_batch: Batch
     ):
-        batch_circular_queue.put(sample_batch)
+        batch_circular_queue.append(sample_batch)
         assert len(batch_circular_queue) == 1
