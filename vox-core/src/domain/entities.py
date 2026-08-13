@@ -143,10 +143,18 @@ class Worker:
 
     heartbeat: datetime | None = None
 
-    simultaneous_capacity: int = 1
+    simultaneous_capacity: int = 1  # TODO: tornar readonly
+
+    current_workload: int = 0
 
     languages_supported: list[str] = field(default_factory=list)
 
     def is_available(self):
+        if self.current_workload >= self.simultaneous_capacity:
+            self.status = WorkerStatus.FULL
+        elif self.current_workload > 0:
+            self.status = WorkerStatus.BUSY
+        else:
+            self.status = WorkerStatus.IDLE
 
-        return self.status == WorkerStatus.IDLE
+        return self.status != WorkerStatus.FULL

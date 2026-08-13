@@ -29,6 +29,7 @@ class TaskAttemptStatus(str, Enum):
 class WorkerStatus(str, Enum):
     IDLE = "IDLE"
     BUSY = "BUSY"
+    FULL = "FULL"
     OFFLINE = "OFFLINE"
 
 
