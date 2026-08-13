@@ -5,7 +5,12 @@ from datetime import datetime
 from uuid import UUID
 from typing import Any
 
-from src.domain.value_objects.enums import TaskAttemptStatus, TaskStatus, WorkerStatus
+from src.domain.value_objects.enums import (
+    TaskAttemptStatus,
+    TaskStatus,
+    WorkerRuntime,
+    WorkerStatus,
+)
 
 # ==========================
 # Entidades
@@ -132,7 +137,7 @@ class Worker:
 
     port: int
 
-    runtime: str
+    runtime: WorkerRuntime
 
     status: WorkerStatus = WorkerStatus.IDLE
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from src.domain.entities import Batch, Task, TaskAttempt, Worker
+from src.domain.value_objects.enums import WorkerStatus
 from src.infrastructure.persistence.models import (
     BatchModel,
     TaskAttemptModel,
@@ -64,8 +65,6 @@ def worker_to_model(worker: Worker) -> WorkerModel:
         ip=worker.ip,
         port=worker.port,
         runtime=worker.runtime,
-        status=worker.status,
-        heartbeat=worker.heartbeat,
         simultaneous_capacity=worker.simultaneous_capacity,
         languages_supported=list(worker.languages_supported),
     )
@@ -80,8 +79,8 @@ def model_to_worker(model: WorkerModel) -> Worker:
         ip=str(model.ip) if model.ip is not None else "",
         port=model.port,
         runtime=model.runtime,
-        status=model.status,
-        heartbeat=model.heartbeat,
+        status=WorkerStatus.IDLE,
+        heartbeat=None,
         simultaneous_capacity=model.simultaneous_capacity,
         languages_supported=list(model.languages_supported or []),
     )

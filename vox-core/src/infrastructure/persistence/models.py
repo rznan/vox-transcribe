@@ -8,7 +8,12 @@ from sqlalchemy import JSON, DateTime, Enum, ForeignKey, Integer, String, JSON, 
 
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
-from src.domain.value_objects.enums import TaskStatus, TaskAttemptStatus, WorkerStatus
+from src.domain.value_objects.enums import (
+    TaskStatus,
+    TaskAttemptStatus,
+    WorkerRuntime,
+    WorkerStatus,
+)
 
 
 class Base(DeclarativeBase):
@@ -145,19 +150,9 @@ class WorkerModel(Base):
         nullable=False,
     )
 
-    runtime: Mapped[str] = mapped_column(
-        String(50),
+    runtime: Mapped[WorkerRuntime] = mapped_column(
+        Enum(WorkerRuntime),
         nullable=False,
-    )
-
-    status: Mapped[WorkerStatus] = mapped_column(  # TODO: avaliar remover
-        Enum(WorkerStatus),
-        default=WorkerStatus.IDLE,
-        nullable=False,
-    )
-
-    heartbeat: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True),
     )
 
     simultaneous_capacity: Mapped[int] = mapped_column(

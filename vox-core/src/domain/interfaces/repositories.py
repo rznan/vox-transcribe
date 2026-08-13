@@ -63,15 +63,7 @@ class TaskRepository(BaseRepository[Task, int]):
 class WorkerRepository(BaseRepository[Worker, str]):
     """Contrato de persistência especializado para Workers."""
 
-    @abstractmethod
-    async def get_available_workers(self) -> Sequence[Worker]:
-        """Retorna trabalhadores em estado de disponibilidade (IDLE)."""
-        pass
-
-    @abstractmethod
-    async def get_stale_workers(self, timeout_seconds: int) -> Sequence[Worker]:
-        """Retorna workers que não enviam heartbeat há mais tempo que o timeout."""
-        pass
+    pass
 
 
 class BatchRepository(BaseRepository[Batch, int]):

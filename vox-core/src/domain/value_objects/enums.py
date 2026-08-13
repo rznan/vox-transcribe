@@ -30,3 +30,8 @@ class WorkerStatus(str, Enum):
     IDLE = "IDLE"
     BUSY = "BUSY"
     OFFLINE = "OFFLINE"
+
+
+class WorkerRuntime(str, Enum):
+    CPU = "CPU"
+    GPU = "GPU"
