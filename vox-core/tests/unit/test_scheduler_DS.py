@@ -1,5 +1,7 @@
-from datetime import datetime
+import asyncio
 import pytest
+
+from datetime import datetime
 
 from src.domain.entities import Batch, Task
 from src.domain.value_objects.enums import TaskStatus
@@ -7,6 +9,7 @@ from src.application.scheduler.data_strutures import (
     BatchCircularList,
     QueueMismatchError,
     QueueEmptyError,
+    BatchNotFoundError,
     TaskQueue,
 )
 
@@ -91,18 +94,19 @@ class TestTaskQueue:
         assert len(task_queue) == initial_length
 
 
-class TestBatchCircularQueue:
+class TestBatchCircularList:
 
-    def test_iniitalization_sets_correct_length_and_items(
+    def test_initialization_sets_correct_length_and_items(
         self, batch_circular_queue: BatchCircularList, sample_batch: Batch
     ):
         assert len(batch_circular_queue) == 1
         assert batch_circular_queue.items[0].batch == sample_batch
 
-    def test_get_returns_first_batch(
+    @pytest.mark.asyncio
+    async def test_get_returns_first_batch(
         self, batch_circular_queue: BatchCircularList, sample_batch: Batch
     ):
-        retrieved_task_queue = batch_circular_queue.getNext()
+        retrieved_task_queue = await batch_circular_queue.getNext()
         assert retrieved_task_queue.batch == sample_batch
 
     def test_remove_updates_queued_set(
@@ -117,22 +121,25 @@ class TestBatchCircularQueue:
         batch_circular_queue.remove(sample_batch.id)
         assert len(batch_circular_queue) == 0
 
-    def test_dequeue_on_empty_queue_raises_error(
+    @pytest.mark.asyncio
+    async def test_get_next_blocks_on_empty_queue(
         self, batch_circular_queue: BatchCircularList, sample_batch: Batch
     ):
         batch_circular_queue.remove(sample_batch.id)
 
-        with pytest.raises(QueueEmptyError):
-            batch_circular_queue.getNext()
+        with pytest.raises(asyncio.TimeoutError):
+            await asyncio.wait_for(batch_circular_queue.getNext(), timeout=0.1)
 
-    def test_batch_not_in_set_is_removed_when_attempted_to_get(
+    @pytest.mark.asyncio
+    async def test_batch_not_in_set_is_removed_when_attempted_to_get(
         self, batch_circular_queue: BatchCircularList, sample_batch: Batch
     ):
         batch_circular_queue.remove(sample_batch.id)
-        try:
-            batch_circular_queue.getNext()
-        except:
-            pass
+
+        # We wrap in wait_for because getNext will pop the removed batch,
+        # realize the queue is empty, and start waiting indefinitely.
+        with pytest.raises(asyncio.TimeoutError):
+            await asyncio.wait_for(batch_circular_queue.getNext(), timeout=0.1)
 
         assert len(batch_circular_queue.queue) == 0
 
@@ -141,3 +148,29 @@ class TestBatchCircularQueue:
     ):
         batch_circular_queue.append(sample_batch)
         assert len(batch_circular_queue) == 1
+
+    def test_requeue_task_success(
+        self, batch_circular_queue: BatchCircularList, sample_task: Task, mocker
+    ):
+        tq = batch_circular_queue.items[sample_task.batch_id]
+        mocker.patch.object(tq, "enqueue")
+
+        batch_circular_queue._batch_available.clear()
+
+        batch_circular_queue.requeueTask(sample_task)
+
+        tq.enqueue.assert_called_once_with(task_id=sample_task.id)
+
+        assert batch_circular_queue._batch_available.is_set()
+
+    def test_requeue_task_raises_batch_not_found_error(
+        self, batch_circular_queue: BatchCircularList, sample_task: Task
+    ):
+        sample_task._batch_id = 999
+
+        with pytest.raises(BatchNotFoundError) as exc_info:
+            batch_circular_queue.requeueTask(sample_task)
+
+        assert "A lista de batches não contem um batch com id: 999" in str(
+            exc_info.value
+        )

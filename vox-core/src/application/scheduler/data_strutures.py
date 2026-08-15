@@ -1,3 +1,5 @@
+import asyncio
+
 from collections import deque
 from src.domain.entities import Batch, Task
 
@@ -13,6 +15,12 @@ class QueueMismatchError(Exception):
 
 class QueueEmptyError(Exception):
     """Lançada quando tenta-se remover um item de uma fila vazia."""
+
+    pass
+
+
+class BatchNotFoundError(Exception):
+    """Lançada quando não é possível encontrar um batch com id especificado."""
 
     pass
 
@@ -55,11 +63,12 @@ class TaskQueue:
 
 
 class BatchCircularList:
-
     def __init__(self) -> None:
         self.queue: deque[TaskQueue] = deque()
         self.items: dict[int, TaskQueue] = {}
         self._queued_batch_ids: set[int] = set()
+
+        self._batch_available = asyncio.Event()
 
     def __len__(self) -> int:
         return len(self.items)
@@ -71,12 +80,16 @@ class BatchCircularList:
             self.queue.append(tq)
             self._queued_batch_ids.add(batch.id)
 
-    def getNext(self) -> TaskQueue:
+            self._batch_available.set()
+
+    async def getNext(self) -> TaskQueue:
         while True:
-            try:
-                tq = self.queue[0]
-            except IndexError:
-                raise QueueEmptyError("A fila de batches está vazia.")
+            if not self.queue:
+                self._batch_available.clear()
+                await self._batch_available.wait()
+                continue
+
+            tq = self.queue[0]
 
             if tq.batch.id not in self._queued_batch_ids:
                 self.queue.popleft()
@@ -89,3 +102,13 @@ class BatchCircularList:
         if batch_id in self._queued_batch_ids:
             self._queued_batch_ids.remove(batch_id)
             del self.items[batch_id]
+
+    def requeueTask(self, task: Task) -> None:
+        if task.batch_id in self.items:
+            tq = self.items[task.batch_id]
+            tq.enqueue(task_id=task.id)
+            self._batch_available.set()
+        else:
+            raise BatchNotFoundError(
+                f"A lista de batches não contem um batch com id: {task.batch_id}"
+            )
