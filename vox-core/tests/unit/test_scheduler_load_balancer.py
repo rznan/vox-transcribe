@@ -1,4 +1,5 @@
 import pytest
+import asyncio
 from uuid import uuid4
 
 from src.domain.entities import Worker
@@ -99,7 +100,8 @@ def test_unregister_unregistered_worker_raises_error(balancer: RoundRobinLoadBal
         balancer.unregister(uuid4())
 
 
-def test_unregister_worker_not_at_top_removes_later(
+@pytest.mark.asyncio
+async def test_unregister_worker_not_at_top_removes_later(
     balancer: RoundRobinLoadBalancer, sample_worker_list: list[Worker]
 ):
     """Testa se remover worker não no topo do deque o marca para remoção futura."""
@@ -115,16 +117,18 @@ def test_unregister_worker_not_at_top_removes_later(
     assert w2.id in balancer.worker_id_deque
     assert w2.id in balancer.to_be_removed_worker_id_set
 
-    # Simulamos o balanceador rodando até o w2 chegar no topo.
-    # Quando o get_worker for chamado, ele deve limpar o w2.
-    balancer.get_worker()
-    balancer.get_worker()
+    # Simulamos o balanceador rodando.
+    # O primeiro chamada retorna w1. A segunda chamada vai avaliar w2, removê-lo de vez
+    # e acabar retornando w1 novamente.
+    await balancer.get_worker()
+    await balancer.get_worker()
 
     assert w2.id not in balancer.worker_id_deque
     assert w2.id not in balancer.to_be_removed_worker_id_set
 
 
-def test_get_worker_idle(
+@pytest.mark.asyncio
+async def test_get_worker_idle(
     balancer: RoundRobinLoadBalancer,
     sample_worker: Worker,
 ):
@@ -132,14 +136,15 @@ def test_get_worker_idle(
     balancer.register(sample_worker)
     sample_worker.current_workload = 0
 
-    worker = balancer.get_worker()
+    worker = await balancer.get_worker()
     assert worker == sample_worker
 
 
-def test_get_worker_skips_removed_until_none(
+@pytest.mark.asyncio
+async def test_get_worker_skips_removed_until_blocks(
     balancer: RoundRobinLoadBalancer, sample_worker_list: list[Worker]
 ):
-    """Testa pegar um worker marcado para remover busca o próximo até retornar None."""
+    """Testa pegar um worker marcado para remover busca o próximo até esgotar a fila e bloquear."""
     w1, w2 = sample_worker_list
     balancer.register(w1)
     balancer.register(w2)
@@ -147,28 +152,31 @@ def test_get_worker_skips_removed_until_none(
     balancer.unregister(w2.id)
     balancer.unregister(w1.id)
 
-    worker = balancer.get_worker()
+    # A fila vai se esvaziar pois todos os workers na fila estão no set de remoção.
+    with pytest.raises(asyncio.TimeoutError):
+        await asyncio.wait_for(balancer.get_worker(), timeout=0.1)
 
-    assert worker is None
     assert len(balancer.worker_id_deque) == 0
 
 
-def test_get_worker_full_removes_from_deque(
+@pytest.mark.asyncio
+async def test_get_worker_full_removes_from_deque_and_blocks(
     balancer: RoundRobinLoadBalancer,
     sample_worker: Worker,
 ):
-    """Testa se pegar um worker cheio o remove do deque e adiciona no set de cheio."""
+    """Testa se pegar um worker cheio o remove do deque e, se a fila esvaziar, entra em espera."""
     balancer.register(sample_worker)
     sample_worker.current_workload = sample_worker.simultaneous_capacity
 
-    worker = balancer.get_worker()
+    with pytest.raises(asyncio.TimeoutError):
+        await asyncio.wait_for(balancer.get_worker(), timeout=0.1)
 
-    assert worker is None
     assert sample_worker.id not in balancer.worker_id_deque
     assert sample_worker.id in balancer.full_worker_id_set
 
 
-def test_mark_worker_as_available_inserts_in_deque(
+@pytest.mark.asyncio
+async def test_mark_worker_as_available_inserts_in_deque(
     balancer: RoundRobinLoadBalancer,
     sample_worker: Worker,
 ):
@@ -177,7 +185,9 @@ def test_mark_worker_as_available_inserts_in_deque(
 
     # Simulando o worker estando no estado 'cheio'
     sample_worker.current_workload = sample_worker.simultaneous_capacity
-    balancer.get_worker()
+
+    with pytest.raises(asyncio.TimeoutError):
+        await asyncio.wait_for(balancer.get_worker(), timeout=0.1)
 
     # Faz o worker se tornar disponível
     sample_worker.current_workload -= 1

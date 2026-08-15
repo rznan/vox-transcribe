@@ -1,3 +1,5 @@
+import asyncio
+
 from abc import ABC, abstractmethod
 from collections import deque
 from uuid import UUID
@@ -24,7 +26,7 @@ class LoadBalancer(ABC):
         pass
 
     @abstractmethod
-    def get_worker(self) -> Worker | None:
+    async def get_worker(self) -> Worker:
         """Retorna um worker disponível"""
         pass
 
@@ -42,12 +44,17 @@ class RoundRobinLoadBalancer(LoadBalancer):
         self.to_be_removed_worker_id_set: set[UUID] = set()
         self.full_worker_id_set: set[UUID] = set()
 
+        self._worker_available = asyncio.Event()
+
     def register(self, worker: Worker) -> None:
         if worker.id not in self.workers:
             self.workers[worker.id] = worker
             self.worker_id_deque.append(worker.id)
             self.to_be_removed_worker_id_set.discard(worker.id)
             self.full_worker_id_set.discard(worker.id)
+
+            if worker.is_available():
+                self._worker_available.set()
 
     def unregister(self, worker_id: UUID) -> None:
         if worker_id not in self.workers:
@@ -63,8 +70,13 @@ class RoundRobinLoadBalancer(LoadBalancer):
             self.to_be_removed_worker_id_set.add(worker_id)
             self.full_worker_id_set.discard(worker_id)
 
-    def get_worker(self) -> Worker | None:
-        while self.worker_id_deque:
+    async def get_worker(self) -> Worker:
+        while True:
+            if not self.worker_id_deque:
+                self._worker_available.clear()
+                await self._worker_available.wait()
+                continue
+
             worker_id = self.worker_id_deque[0]
 
             # Remove workers desregistrados da fila
@@ -85,8 +97,6 @@ class RoundRobinLoadBalancer(LoadBalancer):
             self.worker_id_deque.rotate(-1)
             return worker
 
-        return None
-
     def mark_worker_as_available(self, worker_id: UUID) -> None:
         if worker_id not in self.workers:
             raise WorkerIdNotRegisteredError(
@@ -97,3 +107,4 @@ class RoundRobinLoadBalancer(LoadBalancer):
         if worker.is_available():
             self.worker_id_deque.append(worker.id)
             self.full_worker_id_set.discard(worker_id)
+            self._worker_available.set()
