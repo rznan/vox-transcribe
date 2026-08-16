@@ -21,7 +21,7 @@ from src.domain.value_objects.enums import (
 class TaskAttempt:
 
     task_id: int
-    worker_id: str | None
+    worker_id: UUID
 
     status: TaskAttemptStatus
 
@@ -40,7 +40,9 @@ class TaskAttempt:
     @property
     def id(self) -> int:
         if self.id == None:
-            raise ValueError("Tentativa de acessar o id de uma Task não persistida.")
+            raise ValueError(
+                "Tentativa de acessar o id de uma tentativa não persistida."
+            )
         return self.id
 
 

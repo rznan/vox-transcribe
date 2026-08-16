@@ -101,7 +101,7 @@ class TaskAttemptModel(Base):
         nullable=False,
     )
 
-    worker_id: Mapped[str | None] = mapped_column(
+    worker_id: Mapped[UUID] = mapped_column(
         ForeignKey("workers.id", ondelete="SET NULL"),
     )
 
