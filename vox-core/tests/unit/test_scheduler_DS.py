@@ -109,6 +109,12 @@ class TestBatchCircularList:
         retrieved_task_queue = await batch_circular_queue.getNext()
         assert retrieved_task_queue.batch == sample_batch
 
+    def test_remove_returns_the_correct_task_queue(
+        self, batch_circular_queue: BatchCircularList, sample_batch: Batch
+    ):
+        result = batch_circular_queue.remove(sample_batch.id)
+        assert result.batch == sample_batch
+
     def test_remove_updates_queued_set(
         self, batch_circular_queue: BatchCircularList, sample_batch: Batch
     ):
@@ -120,6 +126,18 @@ class TestBatchCircularList:
     ):
         batch_circular_queue.remove(sample_batch.id)
         assert len(batch_circular_queue) == 0
+
+    def test_remove_raises_batch_not_found_error(
+        self, batch_circular_queue: BatchCircularList
+    ):
+        sample_batch_id = 999
+
+        with pytest.raises(BatchNotFoundError) as exc_info:
+            batch_circular_queue.remove(sample_batch_id)
+
+        assert "A lista de batches não contem um batch com id: 999" in str(
+            exc_info.value
+        )
 
     @pytest.mark.asyncio
     async def test_get_next_blocks_on_empty_queue(

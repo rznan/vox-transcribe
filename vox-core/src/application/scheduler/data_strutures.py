@@ -98,10 +98,15 @@ class BatchCircularList:
             self.queue.rotate(-1)
             return tq
 
-    def remove(self, batch_id: int) -> None:
+    def remove(self, batch_id: int) -> TaskQueue:
         if batch_id in self._queued_batch_ids:
             self._queued_batch_ids.remove(batch_id)
+            tq = self.items[batch_id]
             del self.items[batch_id]
+            return tq
+        raise BatchNotFoundError(
+            f"A lista de batches não contem um batch com id: {batch_id}"
+        )
 
     def requeueTask(self, task: Task) -> None:
         if task.batch_id in self.items:
