@@ -94,6 +94,15 @@ def test_unregister_worker_at_top(
     assert len(balancer.worker_id_deque) == 0
 
 
+def test_unregister_worker_returns_the_worker(
+    balancer: RoundRobinLoadBalancer, sample_worker: Worker
+):
+    """Testa se remover um worker o retorna"""
+    balancer.register(sample_worker)
+    result = balancer.unregister(sample_worker.id)
+    assert result == sample_worker
+
+
 def test_unregister_unregistered_worker_raises_error(balancer: RoundRobinLoadBalancer):
     """Testa se remover um worker que não está presente sobe exceção WorkerIdNotRegisteredError."""
     with pytest.raises(WorkerIdNotRegisteredError):

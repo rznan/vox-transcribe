@@ -21,7 +21,7 @@ class LoadBalancer(ABC):
         pass
 
     @abstractmethod
-    def unregister(self, worker_id: UUID) -> None:
+    def unregister(self, worker_id: UUID) -> Worker:
         """Remove um worker do balanceador de carga"""
         pass
 
@@ -56,19 +56,21 @@ class RoundRobinLoadBalancer(LoadBalancer):
             if worker.is_available():
                 self._worker_available.set()
 
-    def unregister(self, worker_id: UUID) -> None:
+    def unregister(self, worker_id: UUID) -> Worker:
         if worker_id not in self.workers:
             raise WorkerIdNotRegisteredError(
                 f"O id {worker_id} não está registrado no balanceador"
             )
 
-        self.workers.pop(worker_id)
+        worker = self.workers.pop(worker_id)
 
         if self.worker_id_deque[0] == worker_id:
             self.worker_id_deque.popleft()
         else:
             self.to_be_removed_worker_id_set.add(worker_id)
             self.full_worker_id_set.discard(worker_id)
+
+        return worker
 
     async def get_worker(self) -> Worker:
         while True:
