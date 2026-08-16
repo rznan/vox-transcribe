@@ -4,6 +4,12 @@ package loadbalancer;
 
 import "google/protobuf/timestamp.proto";
 
+
+// TODO: list_batches como no repositório (com limit e offset) para popular a interface.
+// Cancel task method para parar o processamento.
+// Um solicitação de remover os dados de um batch
+
+
 enum TaskStatusProto {
   TASK_STATUS_UNSPECIFIED = 0;
   TASK_STATUS_SUBMITTED = 1;
