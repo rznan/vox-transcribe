@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+package loadbalancer;
+
+import "google/protobuf/timestamp.proto";
+
+enum TaskStatusProto {
+  TASK_STATUS_UNSPECIFIED = 0;
+  TASK_STATUS_SUBMITTED = 1;
+  TASK_STATUS_QUEUED = 2;
+  TASK_STATUS_ASSIGNED = 3;
+  TASK_STATUS_RUNNING = 4;
+  TASK_STATUS_CANCEL_REQUESTED = 5;
+  TASK_STATUS_CANCELLED = 6;
+  TASK_STATUS_SUCCEEDED = 7;
+  TASK_STATUS_FAILED = 8;
+  TASK_STATUS_REQUEUED = 9;
+}
+
+message SubmitTaskRequestProto {
+  string filename = 1;
+  int64 size = 2;
+  string artifact_json = 3;
+}
+
+message SubmitTaskResponseProto {
+  int64 task_id = 1;
+  TaskStatusProto status = 2;
+  string message = 3;
+}
+
+message SubmitBatchRequestProto {
+  repeated SubmitTaskRequestProto tasks = 1;
+}
+
+message SubmitBatchResponseProto {
+  int64 batch_id = 1;
+  google.protobuf.Timestamp created_at = 2;
+  repeated SubmitTaskResponseProto tasks = 3;
+}
+
+message GetTaskStatusRequestProto {
+  int64 task_id = 1;
+}
+
+message GetTaskStatusResponseProto {
+  int64 task_id = 1;
+  TaskStatusProto status = 2;
+  string result_text = 3;
+  int32 attempt_count = 4;
+}
+
+service TaskGrpcService {
+  rpc SubmitBatch(SubmitBatchRequestProto)
+      returns (SubmitBatchResponseProto);
+
+  rpc GetTaskStatus(GetTaskStatusRequestProto)
+      returns (GetTaskStatusResponseProto);
+}
