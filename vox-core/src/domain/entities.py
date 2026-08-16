@@ -117,6 +117,11 @@ class Batch:
         default_factory=list
     )  # TODO: permitir nulo para checar se veio vazio do repositório ou realamente não tem tasks
 
+    def cancel_tasks(self):
+        for t in self.tasks:
+            if t.status not in (TaskStatus.SUCCEEDED, TaskStatus.FAILED):
+                t.status = TaskStatus.CANCELLED
+
     @property
     def completed_tasks(self):
         return sum(task.is_finished() for task in self.tasks)
