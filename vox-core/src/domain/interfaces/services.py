@@ -33,3 +33,9 @@ class TaskService(ABC):
         Lista os batches armazenados em memória
         """
         pass
+
+    @abstractmethod
+    async def cancel_batch(self, batch_id: int) -> Batch:
+        """
+        Cancela a execução das tarefas não concluídas de um batch
+        """
