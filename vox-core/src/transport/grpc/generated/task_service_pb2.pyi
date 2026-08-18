@@ -194,3 +194,174 @@ class GetTaskStatusResponseProto(_message.Message):
     def WhichOneof(self, oneof_group: _Never) -> None: ...
 
 Global___GetTaskStatusResponseProto: _TypeAlias = GetTaskStatusResponseProto  # noqa: Y015
+
+@_typing.final
+class ListBatchesRequestProto(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
+
+    LIMIT_FIELD_NUMBER: _builtins.int
+    OFFSET_FIELD_NUMBER: _builtins.int
+    limit: _builtins.int
+    offset: _builtins.int
+    def __init__(
+        self,
+        *,
+        limit: _builtins.int = ...,
+        offset: _builtins.int = ...,
+    ) -> None: ...
+    _HasFieldArgType: _TypeAlias = _Never  # noqa: Y015
+    def HasField(self, field_name: _HasFieldArgType) -> _builtins.bool: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["limit", b"limit", "offset", b"offset"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
+    def WhichOneof(self, oneof_group: _Never) -> None: ...
+
+Global___ListBatchesRequestProto: _TypeAlias = ListBatchesRequestProto  # noqa: Y015
+
+@_typing.final
+class BatchProto(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
+
+    BATCH_ID_FIELD_NUMBER: _builtins.int
+    CREATED_AT_FIELD_NUMBER: _builtins.int
+    TASKS_FIELD_NUMBER: _builtins.int
+    batch_id: _builtins.int
+    @_builtins.property
+    def created_at(self) -> _timestamp_pb2.Timestamp: ...
+    @_builtins.property
+    def tasks(self) -> _containers.RepeatedCompositeFieldContainer[Global___TaskSummaryProto]: ...
+    def __init__(
+        self,
+        *,
+        batch_id: _builtins.int = ...,
+        created_at: _timestamp_pb2.Timestamp | None = ...,
+        tasks: _abc.Iterable[Global___TaskSummaryProto] | None = ...,
+    ) -> None: ...
+    _HasFieldArgType: _TypeAlias = _typing.Literal["created_at", b"created_at"]  # noqa: Y015
+    def HasField(self, field_name: _HasFieldArgType) -> _builtins.bool: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["batch_id", b"batch_id", "created_at", b"created_at", "tasks", b"tasks"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
+    def WhichOneof(self, oneof_group: _Never) -> None: ...
+
+Global___BatchProto: _TypeAlias = BatchProto  # noqa: Y015
+
+@_typing.final
+class TaskSummaryProto(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
+
+    TASK_ID_FIELD_NUMBER: _builtins.int
+    STATUS_FIELD_NUMBER: _builtins.int
+    ATTEMPT_COUNT_FIELD_NUMBER: _builtins.int
+    task_id: _builtins.int
+    status: Global___TaskStatusProto.ValueType
+    attempt_count: _builtins.int
+    def __init__(
+        self,
+        *,
+        task_id: _builtins.int = ...,
+        status: Global___TaskStatusProto.ValueType = ...,
+        attempt_count: _builtins.int = ...,
+    ) -> None: ...
+    _HasFieldArgType: _TypeAlias = _Never  # noqa: Y015
+    def HasField(self, field_name: _HasFieldArgType) -> _builtins.bool: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["attempt_count", b"attempt_count", "status", b"status", "task_id", b"task_id"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
+    def WhichOneof(self, oneof_group: _Never) -> None: ...
+
+Global___TaskSummaryProto: _TypeAlias = TaskSummaryProto  # noqa: Y015
+
+@_typing.final
+class ListBatchesResponseProto(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
+
+    BATCHES_FIELD_NUMBER: _builtins.int
+    @_builtins.property
+    def batches(self) -> _containers.RepeatedCompositeFieldContainer[Global___BatchProto]: ...
+    def __init__(
+        self,
+        *,
+        batches: _abc.Iterable[Global___BatchProto] | None = ...,
+    ) -> None: ...
+    _HasFieldArgType: _TypeAlias = _Never  # noqa: Y015
+    def HasField(self, field_name: _HasFieldArgType) -> _builtins.bool: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["batches", b"batches"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
+    def WhichOneof(self, oneof_group: _Never) -> None: ...
+
+Global___ListBatchesResponseProto: _TypeAlias = ListBatchesResponseProto  # noqa: Y015
+
+@_typing.final
+class CancelBatchRequestProto(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
+
+    BATCH_ID_FIELD_NUMBER: _builtins.int
+    batch_id: _builtins.int
+    def __init__(
+        self,
+        *,
+        batch_id: _builtins.int = ...,
+    ) -> None: ...
+    _HasFieldArgType: _TypeAlias = _Never  # noqa: Y015
+    def HasField(self, field_name: _HasFieldArgType) -> _builtins.bool: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["batch_id", b"batch_id"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
+    def WhichOneof(self, oneof_group: _Never) -> None: ...
+
+Global___CancelBatchRequestProto: _TypeAlias = CancelBatchRequestProto  # noqa: Y015
+
+@_typing.final
+class CancelBatchResponseProto(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
+
+    BATCH_FIELD_NUMBER: _builtins.int
+    @_builtins.property
+    def batch(self) -> Global___BatchProto: ...
+    def __init__(
+        self,
+        *,
+        batch: Global___BatchProto | None = ...,
+    ) -> None: ...
+    _HasFieldArgType: _TypeAlias = _typing.Literal["batch", b"batch"]  # noqa: Y015
+    def HasField(self, field_name: _HasFieldArgType) -> _builtins.bool: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["batch", b"batch"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
+    def WhichOneof(self, oneof_group: _Never) -> None: ...
+
+Global___CancelBatchResponseProto: _TypeAlias = CancelBatchResponseProto  # noqa: Y015
+
+@_typing.final
+class DeleteBatchRequestProto(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
+
+    BATCH_ID_FIELD_NUMBER: _builtins.int
+    batch_id: _builtins.int
+    def __init__(
+        self,
+        *,
+        batch_id: _builtins.int = ...,
+    ) -> None: ...
+    _HasFieldArgType: _TypeAlias = _Never  # noqa: Y015
+    def HasField(self, field_name: _HasFieldArgType) -> _builtins.bool: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["batch_id", b"batch_id"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
+    def WhichOneof(self, oneof_group: _Never) -> None: ...
+
+Global___DeleteBatchRequestProto: _TypeAlias = DeleteBatchRequestProto  # noqa: Y015
+
+@_typing.final
+class DeleteBatchResponseProto(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
+
+    SUCCESS_FIELD_NUMBER: _builtins.int
+    success: _builtins.bool
+    def __init__(
+        self,
+        *,
+        success: _builtins.bool = ...,
+    ) -> None: ...
+    _HasFieldArgType: _TypeAlias = _Never  # noqa: Y015
+    def HasField(self, field_name: _HasFieldArgType) -> _builtins.bool: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["success", b"success"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
+    def WhichOneof(self, oneof_group: _Never) -> None: ...
+
+Global___DeleteBatchResponseProto: _TypeAlias = DeleteBatchResponseProto  # noqa: Y015

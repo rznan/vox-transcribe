@@ -5,11 +5,6 @@ package loadbalancer;
 import "google/protobuf/timestamp.proto";
 
 
-// TODO: list_batches como no repositório (com limit e offset) para popular a interface.
-// Cancel task method para parar o processamento.
-// Um solicitação de remover os dados de um batch
-
-
 enum TaskStatusProto {
   TASK_STATUS_UNSPECIFIED = 0;
   TASK_STATUS_SUBMITTED = 1;
@@ -56,10 +51,47 @@ message GetTaskStatusResponseProto {
   int32 attempt_count = 4;
 }
 
-service TaskGrpcService {
-  rpc SubmitBatch(SubmitBatchRequestProto)
-      returns (SubmitBatchResponseProto);
+message ListBatchesRequestProto {
+  int32 limit = 1;
+  int32 offset = 2;
+}
 
-  rpc GetTaskStatus(GetTaskStatusRequestProto)
-      returns (GetTaskStatusResponseProto);
+message BatchProto {
+  int64 batch_id = 1;
+  google.protobuf.Timestamp created_at = 2;
+  repeated TaskSummaryProto tasks = 3;
+}
+
+message TaskSummaryProto {
+  int64 task_id = 1;
+  TaskStatusProto status = 2;
+  int32 attempt_count = 3;
+}
+
+message ListBatchesResponseProto {
+  repeated BatchProto batches = 1;
+}
+
+message CancelBatchRequestProto {
+  int64 batch_id = 1;
+}
+
+message CancelBatchResponseProto {
+  BatchProto batch = 1;
+}
+
+message DeleteBatchRequestProto {
+  int64 batch_id = 1;
+}
+
+message DeleteBatchResponseProto {
+  bool success = 1;
+}
+
+service TaskGrpcService {
+  rpc SubmitBatch(SubmitBatchRequestProto) returns (SubmitBatchResponseProto);
+  rpc GetTaskStatus(GetTaskStatusRequestProto) returns (GetTaskStatusResponseProto);
+  rpc ListBatches(ListBatchesRequestProto) returns (ListBatchesResponseProto);
+  rpc CancelBatch(CancelBatchRequestProto) returns (CancelBatchResponseProto);
+  rpc DeleteBatch(DeleteBatchRequestProto) returns (DeleteBatchResponseProto);
 }

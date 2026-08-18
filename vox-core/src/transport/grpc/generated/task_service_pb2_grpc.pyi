@@ -33,12 +33,18 @@ class TaskGrpcServiceStub:
     def __new__(cls, channel: _aio.Channel) -> TaskGrpcServiceAsyncStub: ...
     SubmitBatch: _grpc.UnaryUnaryMultiCallable[_task_service_pb2.SubmitBatchRequestProto, _task_service_pb2.SubmitBatchResponseProto]
     GetTaskStatus: _grpc.UnaryUnaryMultiCallable[_task_service_pb2.GetTaskStatusRequestProto, _task_service_pb2.GetTaskStatusResponseProto]
+    ListBatches: _grpc.UnaryUnaryMultiCallable[_task_service_pb2.ListBatchesRequestProto, _task_service_pb2.ListBatchesResponseProto]
+    CancelBatch: _grpc.UnaryUnaryMultiCallable[_task_service_pb2.CancelBatchRequestProto, _task_service_pb2.CancelBatchResponseProto]
+    DeleteBatch: _grpc.UnaryUnaryMultiCallable[_task_service_pb2.DeleteBatchRequestProto, _task_service_pb2.DeleteBatchResponseProto]
 
 @_typing.type_check_only
 class TaskGrpcServiceAsyncStub(TaskGrpcServiceStub):
     def __init__(self, channel: _aio.Channel) -> None: ...
     SubmitBatch: _aio.UnaryUnaryMultiCallable[_task_service_pb2.SubmitBatchRequestProto, _task_service_pb2.SubmitBatchResponseProto]  # type: ignore[assignment]
     GetTaskStatus: _aio.UnaryUnaryMultiCallable[_task_service_pb2.GetTaskStatusRequestProto, _task_service_pb2.GetTaskStatusResponseProto]  # type: ignore[assignment]
+    ListBatches: _aio.UnaryUnaryMultiCallable[_task_service_pb2.ListBatchesRequestProto, _task_service_pb2.ListBatchesResponseProto]  # type: ignore[assignment]
+    CancelBatch: _aio.UnaryUnaryMultiCallable[_task_service_pb2.CancelBatchRequestProto, _task_service_pb2.CancelBatchResponseProto]  # type: ignore[assignment]
+    DeleteBatch: _aio.UnaryUnaryMultiCallable[_task_service_pb2.DeleteBatchRequestProto, _task_service_pb2.DeleteBatchResponseProto]  # type: ignore[assignment]
 
 class TaskGrpcServiceServicer(metaclass=_abc_1.ABCMeta):
     @_abc_1.abstractmethod
@@ -54,5 +60,26 @@ class TaskGrpcServiceServicer(metaclass=_abc_1.ABCMeta):
         request: _task_service_pb2.GetTaskStatusRequestProto,
         context: _ServicerContext,
     ) -> _typing.Union[_task_service_pb2.GetTaskStatusResponseProto, _abc.Awaitable[_task_service_pb2.GetTaskStatusResponseProto]]: ...
+
+    @_abc_1.abstractmethod
+    def ListBatches(
+        self,
+        request: _task_service_pb2.ListBatchesRequestProto,
+        context: _ServicerContext,
+    ) -> _typing.Union[_task_service_pb2.ListBatchesResponseProto, _abc.Awaitable[_task_service_pb2.ListBatchesResponseProto]]: ...
+
+    @_abc_1.abstractmethod
+    def CancelBatch(
+        self,
+        request: _task_service_pb2.CancelBatchRequestProto,
+        context: _ServicerContext,
+    ) -> _typing.Union[_task_service_pb2.CancelBatchResponseProto, _abc.Awaitable[_task_service_pb2.CancelBatchResponseProto]]: ...
+
+    @_abc_1.abstractmethod
+    def DeleteBatch(
+        self,
+        request: _task_service_pb2.DeleteBatchRequestProto,
+        context: _ServicerContext,
+    ) -> _typing.Union[_task_service_pb2.DeleteBatchResponseProto, _abc.Awaitable[_task_service_pb2.DeleteBatchResponseProto]]: ...
 
 def add_TaskGrpcServiceServicer_to_server(servicer: TaskGrpcServiceServicer, server: _typing.Union[_grpc.Server, _aio.Server]) -> None: ...

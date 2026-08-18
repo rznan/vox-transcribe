@@ -61,3 +61,32 @@ def task_domain_to_status_response(task: Task) -> pb2.GetTaskStatusResponseProto
         result_text=task.result_text or "",  # TODO: avaliar como enviar futuramente
         attempt_count=len(task.attempts),
     )
+
+
+def task_domain_to_summary_proto(task: Task) -> pb2.TaskSummaryProto:
+    proto_status = STATUS_DOMAIN_TO_PROTO.get(task.status, pb2.TASK_STATUS_UNSPECIFIED)
+    return pb2.TaskSummaryProto(
+        task_id=task.id,
+        status=proto_status,
+        attempt_count=len(task.attempts),
+    )
+
+
+def batch_domain_to_proto(batch: Batch) -> pb2.BatchProto:
+    tasks_summary_proto = [task_domain_to_summary_proto(t) for t in batch.tasks]
+    return pb2.BatchProto(
+        batch_id=batch.id,
+        created_at=Timestamp().FromDatetime(batch.created_at),
+        tasks=tasks_summary_proto,
+    )
+
+
+def list_batches_domain_to_proto(batches: list[Batch]) -> pb2.ListBatchesResponseProto:
+    batch_protos = [batch_domain_to_proto(b) for b in batches]
+    return pb2.ListBatchesResponseProto(
+        batches=batch_protos,
+    )
+
+
+def cancel_batch_domain_to_response(batch: Batch) -> pb2.CancelBatchResponseProto:
+    return pb2.CancelBatchResponseProto(batch=batch_domain_to_proto(batch))

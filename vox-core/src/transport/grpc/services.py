@@ -2,6 +2,8 @@ import grpc
 from src.transport.grpc.generated import task_service_pb2 as pb2
 from src.transport.grpc.generated import task_service_pb2_grpc as pb2_grpc
 from src.transport.grpc.mappers import (
+    cancel_batch_domain_to_response,
+    list_batches_domain_to_proto,
     submit_batch_request_to_domain,
     batch_domain_to_submit_response,
     task_domain_to_status_response,
@@ -33,3 +35,22 @@ class TaskGrpcServiceImpl(pb2_grpc.TaskGrpcServiceServicer):
             )
 
         return task_domain_to_status_response(task)
+
+    async def ListBatches(
+        self, request: pb2.ListBatchesRequestProto, context: grpc.aio.ServicerContext
+    ) -> pb2.ListBatchesResponseProto:
+
+        batches = await self.task_service.list_batches(request.limit, request.offset)
+        return list_batches_domain_to_proto(batches)
+
+    async def CancelBatch(
+        self, request: pb2.CancelBatchRequestProto, context: grpc.aio.ServicerContext
+    ) -> pb2.CancelBatchResponseProto:
+        batch = await self.task_service.get_by_id(request.batch_id)
+        if not batch:
+            await context.abort(
+                grpc.StatusCode.NOT_FOUND, f"Batch {request.batch_id} não encontrado."
+            )
+
+        cancelled_batch = await self.task_service.cancel_batch(request.batch_id)
+        return cancel_batch_domain_to_response(cancelled_batch)
