@@ -25,43 +25,49 @@ _sym_db = _symbol_database.Default()
 from google.protobuf import timestamp_pb2 as google_dot_protobuf_dot_timestamp__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x12task_service.proto\x12\x0cloadbalancer\x1a\x1fgoogle/protobuf/timestamp.proto\"O\n\x16SubmitTaskRequestProto\x12\x10\n\x08\x66ilename\x18\x01 \x01(\t\x12\x0c\n\x04size\x18\x02 \x01(\x03\x12\x15\n\rartifact_json\x18\x03 \x01(\t\"j\n\x17SubmitTaskResponseProto\x12\x0f\n\x07task_id\x18\x01 \x01(\x03\x12-\n\x06status\x18\x02 \x01(\x0e\x32\x1d.loadbalancer.TaskStatusProto\x12\x0f\n\x07message\x18\x03 \x01(\t\"N\n\x17SubmitBatchRequestProto\x12\x33\n\x05tasks\x18\x01 \x03(\x0b\x32$.loadbalancer.SubmitTaskRequestProto\"\x92\x01\n\x18SubmitBatchResponseProto\x12\x10\n\x08\x62\x61tch_id\x18\x01 \x01(\x03\x12.\n\ncreated_at\x18\x02 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12\x34\n\x05tasks\x18\x03 \x03(\x0b\x32%.loadbalancer.SubmitTaskResponseProto\",\n\x19GetTaskStatusRequestProto\x12\x0f\n\x07task_id\x18\x01 \x01(\x03\"\x88\x01\n\x1aGetTaskStatusResponseProto\x12\x0f\n\x07task_id\x18\x01 \x01(\x03\x12-\n\x06status\x18\x02 \x01(\x0e\x32\x1d.loadbalancer.TaskStatusProto\x12\x13\n\x0bresult_text\x18\x03 \x01(\t\x12\x15\n\rattempt_count\x18\x04 \x01(\x05\"8\n\x17ListBatchesRequestProto\x12\r\n\x05limit\x18\x01 \x01(\x05\x12\x0e\n\x06offset\x18\x02 \x01(\x05\"}\n\nBatchProto\x12\x10\n\x08\x62\x61tch_id\x18\x01 \x01(\x03\x12.\n\ncreated_at\x18\x02 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12-\n\x05tasks\x18\x03 \x03(\x0b\x32\x1e.loadbalancer.TaskSummaryProto\"i\n\x10TaskSummaryProto\x12\x0f\n\x07task_id\x18\x01 \x01(\x03\x12-\n\x06status\x18\x02 \x01(\x0e\x32\x1d.loadbalancer.TaskStatusProto\x12\x15\n\rattempt_count\x18\x03 \x01(\x05\"E\n\x18ListBatchesResponseProto\x12)\n\x07\x62\x61tches\x18\x01 \x03(\x0b\x32\x18.loadbalancer.BatchProto\"+\n\x17\x43\x61ncelBatchRequestProto\x12\x10\n\x08\x62\x61tch_id\x18\x01 \x01(\x03\"C\n\x18\x43\x61ncelBatchResponseProto\x12\'\n\x05\x62\x61tch\x18\x01 \x01(\x0b\x32\x18.loadbalancer.BatchProto\"+\n\x17\x44\x65leteBatchRequestProto\x12\x10\n\x08\x62\x61tch_id\x18\x01 \x01(\x03\"+\n\x18\x44\x65leteBatchResponseProto\x12\x0f\n\x07success\x18\x01 \x01(\x08*\x9e\x02\n\x0fTaskStatusProto\x12\x1b\n\x17TASK_STATUS_UNSPECIFIED\x10\x00\x12\x19\n\x15TASK_STATUS_SUBMITTED\x10\x01\x12\x16\n\x12TASK_STATUS_QUEUED\x10\x02\x12\x18\n\x14TASK_STATUS_ASSIGNED\x10\x03\x12\x17\n\x13TASK_STATUS_RUNNING\x10\x04\x12 \n\x1cTASK_STATUS_CANCEL_REQUESTED\x10\x05\x12\x19\n\x15TASK_STATUS_CANCELLED\x10\x06\x12\x19\n\x15TASK_STATUS_SUCCEEDED\x10\x07\x12\x16\n\x12TASK_STATUS_FAILED\x10\x08\x12\x18\n\x14TASK_STATUS_REQUEUED\x10\t2\xed\x03\n\x0fTaskGrpcService\x12\\\n\x0bSubmitBatch\x12%.loadbalancer.SubmitBatchRequestProto\x1a&.loadbalancer.SubmitBatchResponseProto\x12\x62\n\rGetTaskStatus\x12\'.loadbalancer.GetTaskStatusRequestProto\x1a(.loadbalancer.GetTaskStatusResponseProto\x12\\\n\x0bListBatches\x12%.loadbalancer.ListBatchesRequestProto\x1a&.loadbalancer.ListBatchesResponseProto\x12\\\n\x0b\x43\x61ncelBatch\x12%.loadbalancer.CancelBatchRequestProto\x1a&.loadbalancer.CancelBatchResponseProto\x12\\\n\x0b\x44\x65leteBatch\x12%.loadbalancer.DeleteBatchRequestProto\x1a&.loadbalancer.DeleteBatchResponseProtob\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x12task_service.proto\x12\x0ctask_service\x1a\x1fgoogle/protobuf/timestamp.proto\"|\n\rTaskLiteProto\x12\n\n\x02id\x18\x01 \x01(\x03\x12\x10\n\x08\x66ilename\x18\x02 \x01(\t\x12(\n\x06status\x18\x03 \x01(\x0e\x32\x18.task_service.TaskStatus\x12\x0c\n\x04size\x18\x04 \x01(\x03\x12\x15\n\rattempt_count\x18\x05 \x01(\x05\"\xa3\x01\n\rTaskFullProto\x12\n\n\x02id\x18\x01 \x01(\x03\x12\x10\n\x08\x66ilename\x18\x02 \x01(\t\x12(\n\x06status\x18\x03 \x01(\x0e\x32\x18.task_service.TaskStatus\x12\x0c\n\x04size\x18\x04 \x01(\x03\x12\x15\n\rattempt_count\x18\x05 \x01(\x05\x12\x0e\n\x06result\x18\x06 \x01(\t\x12\x15\n\rartifact_json\x18\x07 \x01(\t\"\x86\x01\n\x0e\x42\x61tchLiteProto\x12\n\n\x02id\x18\x01 \x01(\x03\x12.\n\ncreated_at\x18\x02 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12\x19\n\x11total_jobs_number\x18\x03 \x01(\x05\x12\x1d\n\x15\x63ompleted_jobs_number\x18\x04 \x01(\x05\"\xb2\x01\n\x0e\x42\x61tchFullProto\x12\n\n\x02id\x18\x01 \x01(\x03\x12.\n\ncreated_at\x18\x02 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12\x19\n\x11total_jobs_number\x18\x03 \x01(\x05\x12\x1d\n\x15\x63ompleted_jobs_number\x18\x04 \x01(\x05\x12*\n\x05tasks\x18\x05 \x03(\x0b\x32\x1b.task_service.TaskLiteProto\"O\n\x16SubmitTaskRequestProto\x12\x15\n\rartifact_json\x18\x01 \x01(\t\x12\x10\n\x08\x66ilename\x18\x02 \x01(\t\x12\x0c\n\x04size\x18\x03 \x01(\x03\"N\n\x17SubmitBatchRequestProto\x12\x33\n\x05tasks\x18\x01 \x03(\x0b\x32$.task_service.SubmitTaskRequestProto\"\\\n\x18SubmitBatchResponseProto\x12\x10\n\x08\x62\x61tch_id\x18\x01 \x01(\x03\x12.\n\ncreated_at\x18\x02 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\"(\n\x14GetBatchRequestProto\x12\x10\n\x08\x62\x61tch_id\x18\x01 \x01(\x03\"D\n\x15GetBatchResponseProto\x12+\n\x05\x62\x61tch\x18\x01 \x01(\x0b\x32\x1c.task_service.BatchFullProto\"&\n\x13GetTaskRequestProto\x12\x0f\n\x07task_id\x18\x01 \x01(\x03\"A\n\x14GetTaskResponseProto\x12)\n\x04task\x18\x01 \x01(\x0b\x32\x1b.task_service.TaskFullProto\"8\n\x17ListBatchesRequestProto\x12\r\n\x05limit\x18\x01 \x01(\x05\x12\x0e\n\x06offset\x18\x02 \x01(\x05\"I\n\x18ListBatchesResponseProto\x12-\n\x07\x62\x61tches\x18\x01 \x03(\x0b\x32\x1c.task_service.BatchLiteProto\"+\n\x17\x43\x61ncelBatchRequestProto\x12\x10\n\x08\x62\x61tch_id\x18\x01 \x01(\x03\"G\n\x18\x43\x61ncelBatchResponseProto\x12+\n\x05\x62\x61tch\x18\x01 \x01(\x0b\x32\x1c.task_service.BatchLiteProto\"+\n\x17\x44\x65leteBatchRequestProto\x12\x10\n\x08\x62\x61tch_id\x18\x01 \x01(\x03\"+\n\x18\x44\x65leteBatchResponseProto\x12\x0f\n\x07success\x18\x01 \x01(\x08*\x99\x02\n\nTaskStatus\x12\x1b\n\x17TASK_STATUS_UNSPECIFIED\x10\x00\x12\x19\n\x15TASK_STATUS_SUBMITTED\x10\x01\x12\x16\n\x12TASK_STATUS_QUEUED\x10\x02\x12\x18\n\x14TASK_STATUS_ASSIGNED\x10\x03\x12\x17\n\x13TASK_STATUS_RUNNING\x10\x04\x12 \n\x1cTASK_STATUS_CANCEL_REQUESTED\x10\x05\x12\x19\n\x15TASK_STATUS_CANCELLED\x10\x06\x12\x19\n\x15TASK_STATUS_SUCCEEDED\x10\x07\x12\x16\n\x12TASK_STATUS_FAILED\x10\x08\x12\x18\n\x14TASK_STATUS_REQUEUED\x10\t2\xb0\x04\n\x0fTaskGrpcService\x12\\\n\x0bSubmitBatch\x12%.task_service.SubmitBatchRequestProto\x1a&.task_service.SubmitBatchResponseProto\x12S\n\x08GetBatch\x12\".task_service.GetBatchRequestProto\x1a#.task_service.GetBatchResponseProto\x12P\n\x07GetTask\x12!.task_service.GetTaskRequestProto\x1a\".task_service.GetTaskResponseProto\x12\\\n\x0bListBatches\x12%.task_service.ListBatchesRequestProto\x1a&.task_service.ListBatchesResponseProto\x12\\\n\x0b\x43\x61ncelBatch\x12%.task_service.CancelBatchRequestProto\x1a&.task_service.CancelBatchResponseProto\x12\\\n\x0b\x44\x65leteBatch\x12%.task_service.DeleteBatchRequestProto\x1a&.task_service.DeleteBatchResponseProtob\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'task_service_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
-  _globals['_TASKSTATUSPROTO']._serialized_start=1240
-  _globals['_TASKSTATUSPROTO']._serialized_end=1526
-  _globals['_SUBMITTASKREQUESTPROTO']._serialized_start=69
-  _globals['_SUBMITTASKREQUESTPROTO']._serialized_end=148
-  _globals['_SUBMITTASKRESPONSEPROTO']._serialized_start=150
-  _globals['_SUBMITTASKRESPONSEPROTO']._serialized_end=256
-  _globals['_SUBMITBATCHREQUESTPROTO']._serialized_start=258
-  _globals['_SUBMITBATCHREQUESTPROTO']._serialized_end=336
-  _globals['_SUBMITBATCHRESPONSEPROTO']._serialized_start=339
-  _globals['_SUBMITBATCHRESPONSEPROTO']._serialized_end=485
-  _globals['_GETTASKSTATUSREQUESTPROTO']._serialized_start=487
-  _globals['_GETTASKSTATUSREQUESTPROTO']._serialized_end=531
-  _globals['_GETTASKSTATUSRESPONSEPROTO']._serialized_start=534
-  _globals['_GETTASKSTATUSRESPONSEPROTO']._serialized_end=670
-  _globals['_LISTBATCHESREQUESTPROTO']._serialized_start=672
-  _globals['_LISTBATCHESREQUESTPROTO']._serialized_end=728
-  _globals['_BATCHPROTO']._serialized_start=730
-  _globals['_BATCHPROTO']._serialized_end=855
-  _globals['_TASKSUMMARYPROTO']._serialized_start=857
-  _globals['_TASKSUMMARYPROTO']._serialized_end=962
-  _globals['_LISTBATCHESRESPONSEPROTO']._serialized_start=964
-  _globals['_LISTBATCHESRESPONSEPROTO']._serialized_end=1033
-  _globals['_CANCELBATCHREQUESTPROTO']._serialized_start=1035
-  _globals['_CANCELBATCHREQUESTPROTO']._serialized_end=1078
-  _globals['_CANCELBATCHRESPONSEPROTO']._serialized_start=1080
-  _globals['_CANCELBATCHRESPONSEPROTO']._serialized_end=1147
-  _globals['_DELETEBATCHREQUESTPROTO']._serialized_start=1149
-  _globals['_DELETEBATCHREQUESTPROTO']._serialized_end=1192
-  _globals['_DELETEBATCHRESPONSEPROTO']._serialized_start=1194
-  _globals['_DELETEBATCHRESPONSEPROTO']._serialized_end=1237
-  _globals['_TASKGRPCSERVICE']._serialized_start=1529
-  _globals['_TASKGRPCSERVICE']._serialized_end=2022
+  _globals['_TASKSTATUS']._serialized_start=1495
+  _globals['_TASKSTATUS']._serialized_end=1776
+  _globals['_TASKLITEPROTO']._serialized_start=69
+  _globals['_TASKLITEPROTO']._serialized_end=193
+  _globals['_TASKFULLPROTO']._serialized_start=196
+  _globals['_TASKFULLPROTO']._serialized_end=359
+  _globals['_BATCHLITEPROTO']._serialized_start=362
+  _globals['_BATCHLITEPROTO']._serialized_end=496
+  _globals['_BATCHFULLPROTO']._serialized_start=499
+  _globals['_BATCHFULLPROTO']._serialized_end=677
+  _globals['_SUBMITTASKREQUESTPROTO']._serialized_start=679
+  _globals['_SUBMITTASKREQUESTPROTO']._serialized_end=758
+  _globals['_SUBMITBATCHREQUESTPROTO']._serialized_start=760
+  _globals['_SUBMITBATCHREQUESTPROTO']._serialized_end=838
+  _globals['_SUBMITBATCHRESPONSEPROTO']._serialized_start=840
+  _globals['_SUBMITBATCHRESPONSEPROTO']._serialized_end=932
+  _globals['_GETBATCHREQUESTPROTO']._serialized_start=934
+  _globals['_GETBATCHREQUESTPROTO']._serialized_end=974
+  _globals['_GETBATCHRESPONSEPROTO']._serialized_start=976
+  _globals['_GETBATCHRESPONSEPROTO']._serialized_end=1044
+  _globals['_GETTASKREQUESTPROTO']._serialized_start=1046
+  _globals['_GETTASKREQUESTPROTO']._serialized_end=1084
+  _globals['_GETTASKRESPONSEPROTO']._serialized_start=1086
+  _globals['_GETTASKRESPONSEPROTO']._serialized_end=1151
+  _globals['_LISTBATCHESREQUESTPROTO']._serialized_start=1153
+  _globals['_LISTBATCHESREQUESTPROTO']._serialized_end=1209
+  _globals['_LISTBATCHESRESPONSEPROTO']._serialized_start=1211
+  _globals['_LISTBATCHESRESPONSEPROTO']._serialized_end=1284
+  _globals['_CANCELBATCHREQUESTPROTO']._serialized_start=1286
+  _globals['_CANCELBATCHREQUESTPROTO']._serialized_end=1329
+  _globals['_CANCELBATCHRESPONSEPROTO']._serialized_start=1331
+  _globals['_CANCELBATCHRESPONSEPROTO']._serialized_end=1402
+  _globals['_DELETEBATCHREQUESTPROTO']._serialized_start=1404
+  _globals['_DELETEBATCHREQUESTPROTO']._serialized_end=1447
+  _globals['_DELETEBATCHRESPONSEPROTO']._serialized_start=1449
+  _globals['_DELETEBATCHRESPONSEPROTO']._serialized_end=1492
+  _globals['_TASKGRPCSERVICE']._serialized_start=1779
+  _globals['_TASKGRPCSERVICE']._serialized_end=2339
 # @@protoc_insertion_point(module_scope)

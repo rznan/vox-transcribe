@@ -35,27 +35,32 @@ class TaskGrpcServiceStub:
             channel: A grpc.Channel.
         """
         self.SubmitBatch = channel.unary_unary(
-                '/loadbalancer.TaskGrpcService/SubmitBatch',
+                '/task_service.TaskGrpcService/SubmitBatch',
                 request_serializer=task__service__pb2.SubmitBatchRequestProto.SerializeToString,
                 response_deserializer=task__service__pb2.SubmitBatchResponseProto.FromString,
                 _registered_method=True)
-        self.GetTaskStatus = channel.unary_unary(
-                '/loadbalancer.TaskGrpcService/GetTaskStatus',
-                request_serializer=task__service__pb2.GetTaskStatusRequestProto.SerializeToString,
-                response_deserializer=task__service__pb2.GetTaskStatusResponseProto.FromString,
+        self.GetBatch = channel.unary_unary(
+                '/task_service.TaskGrpcService/GetBatch',
+                request_serializer=task__service__pb2.GetBatchRequestProto.SerializeToString,
+                response_deserializer=task__service__pb2.GetBatchResponseProto.FromString,
+                _registered_method=True)
+        self.GetTask = channel.unary_unary(
+                '/task_service.TaskGrpcService/GetTask',
+                request_serializer=task__service__pb2.GetTaskRequestProto.SerializeToString,
+                response_deserializer=task__service__pb2.GetTaskResponseProto.FromString,
                 _registered_method=True)
         self.ListBatches = channel.unary_unary(
-                '/loadbalancer.TaskGrpcService/ListBatches',
+                '/task_service.TaskGrpcService/ListBatches',
                 request_serializer=task__service__pb2.ListBatchesRequestProto.SerializeToString,
                 response_deserializer=task__service__pb2.ListBatchesResponseProto.FromString,
                 _registered_method=True)
         self.CancelBatch = channel.unary_unary(
-                '/loadbalancer.TaskGrpcService/CancelBatch',
+                '/task_service.TaskGrpcService/CancelBatch',
                 request_serializer=task__service__pb2.CancelBatchRequestProto.SerializeToString,
                 response_deserializer=task__service__pb2.CancelBatchResponseProto.FromString,
                 _registered_method=True)
         self.DeleteBatch = channel.unary_unary(
-                '/loadbalancer.TaskGrpcService/DeleteBatch',
+                '/task_service.TaskGrpcService/DeleteBatch',
                 request_serializer=task__service__pb2.DeleteBatchRequestProto.SerializeToString,
                 response_deserializer=task__service__pb2.DeleteBatchResponseProto.FromString,
                 _registered_method=True)
@@ -70,7 +75,13 @@ class TaskGrpcServiceServicer:
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def GetTaskStatus(self, request, context):
+    def GetBatch(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetTask(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -102,10 +113,15 @@ def add_TaskGrpcServiceServicer_to_server(servicer, server):
                     request_deserializer=task__service__pb2.SubmitBatchRequestProto.FromString,
                     response_serializer=task__service__pb2.SubmitBatchResponseProto.SerializeToString,
             ),
-            'GetTaskStatus': grpc.unary_unary_rpc_method_handler(
-                    servicer.GetTaskStatus,
-                    request_deserializer=task__service__pb2.GetTaskStatusRequestProto.FromString,
-                    response_serializer=task__service__pb2.GetTaskStatusResponseProto.SerializeToString,
+            'GetBatch': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetBatch,
+                    request_deserializer=task__service__pb2.GetBatchRequestProto.FromString,
+                    response_serializer=task__service__pb2.GetBatchResponseProto.SerializeToString,
+            ),
+            'GetTask': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetTask,
+                    request_deserializer=task__service__pb2.GetTaskRequestProto.FromString,
+                    response_serializer=task__service__pb2.GetTaskResponseProto.SerializeToString,
             ),
             'ListBatches': grpc.unary_unary_rpc_method_handler(
                     servicer.ListBatches,
@@ -124,9 +140,9 @@ def add_TaskGrpcServiceServicer_to_server(servicer, server):
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-            'loadbalancer.TaskGrpcService', rpc_method_handlers)
+            'task_service.TaskGrpcService', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
-    server.add_registered_method_handlers('loadbalancer.TaskGrpcService', rpc_method_handlers)
+    server.add_registered_method_handlers('task_service.TaskGrpcService', rpc_method_handlers)
 
 
  # This class is part of an EXPERIMENTAL API.
@@ -147,7 +163,7 @@ class TaskGrpcService:
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/loadbalancer.TaskGrpcService/SubmitBatch',
+            '/task_service.TaskGrpcService/SubmitBatch',
             task__service__pb2.SubmitBatchRequestProto.SerializeToString,
             task__service__pb2.SubmitBatchResponseProto.FromString,
             options,
@@ -161,7 +177,7 @@ class TaskGrpcService:
             _registered_method=True)
 
     @staticmethod
-    def GetTaskStatus(request,
+    def GetBatch(request,
             target,
             options=(),
             channel_credentials=None,
@@ -174,9 +190,36 @@ class TaskGrpcService:
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/loadbalancer.TaskGrpcService/GetTaskStatus',
-            task__service__pb2.GetTaskStatusRequestProto.SerializeToString,
-            task__service__pb2.GetTaskStatusResponseProto.FromString,
+            '/task_service.TaskGrpcService/GetBatch',
+            task__service__pb2.GetBatchRequestProto.SerializeToString,
+            task__service__pb2.GetBatchResponseProto.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetTask(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/task_service.TaskGrpcService/GetTask',
+            task__service__pb2.GetTaskRequestProto.SerializeToString,
+            task__service__pb2.GetTaskResponseProto.FromString,
             options,
             channel_credentials,
             insecure,
@@ -201,7 +244,7 @@ class TaskGrpcService:
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/loadbalancer.TaskGrpcService/ListBatches',
+            '/task_service.TaskGrpcService/ListBatches',
             task__service__pb2.ListBatchesRequestProto.SerializeToString,
             task__service__pb2.ListBatchesResponseProto.FromString,
             options,
@@ -228,7 +271,7 @@ class TaskGrpcService:
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/loadbalancer.TaskGrpcService/CancelBatch',
+            '/task_service.TaskGrpcService/CancelBatch',
             task__service__pb2.CancelBatchRequestProto.SerializeToString,
             task__service__pb2.CancelBatchResponseProto.FromString,
             options,
@@ -255,7 +298,7 @@ class TaskGrpcService:
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/loadbalancer.TaskGrpcService/DeleteBatch',
+            '/task_service.TaskGrpcService/DeleteBatch',
             task__service__pb2.DeleteBatchRequestProto.SerializeToString,
             task__service__pb2.DeleteBatchResponseProto.FromString,
             options,
