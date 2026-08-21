@@ -30,6 +30,10 @@ M = TypeVar("M")
 # id da entidade de domínio
 ID = TypeVar("ID")
 
+# TODO: fazer os stmts serem campos para poder modificar mais fácilmente as querries quando algo
+# específico for necessário para atingir o resultado esperado. P.ex. retornar taskAttempts sempre
+# nas Tasks
+
 
 class BaseRepository(rc.BaseRepository[T, ID], Generic[T, M, ID]):
 
@@ -105,6 +109,7 @@ class TaskRepository(BaseRepository[Task, TaskModel, int], rc.TaskRepository):
         """Recupera tarefas filtradas por status."""
         stmt = (
             select(TaskModel)
+            .options(selectinload(TaskModel.attempts))
             .limit(limit)
             .offset(offset)
             .where(TaskModel.status == status)
@@ -117,6 +122,7 @@ class TaskRepository(BaseRepository[Task, TaskModel, int], rc.TaskRepository):
         """Recupera tarefas prontas para serem escalonadas/executadas."""
         stmt = (
             select(TaskModel)
+            .options(selectinload(TaskModel.attempts))
             .limit(limit)
             .offset(offset)
             .filter(
@@ -131,7 +137,11 @@ class TaskRepository(BaseRepository[Task, TaskModel, int], rc.TaskRepository):
 
     async def get_by_batch_id(self, batch_id: int) -> list[Task]:
         """Recupera todas as tarefas associadas a um Lote (Batch)."""
-        stmt = select(TaskModel).where(TaskModel.batch_id == batch_id)
+        stmt = (
+            select(TaskModel)
+            .options(selectinload(TaskModel.attempts))
+            .where(TaskModel.batch_id == batch_id)
+        )
         models = (await self.session.scalars(stmt)).all()
         return [self.to_domain(m) for m in models]
 
