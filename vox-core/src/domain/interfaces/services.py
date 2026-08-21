@@ -21,9 +21,16 @@ class TaskService(ABC):
         pass
 
     @abstractmethod
-    async def get_by_id(self, task_id: int) -> Task | None:
+    async def get_task(self, task_id: int) -> Task | None:
         """
         Retorna a task completa (com tentativas e resultado) solicitada
+        """
+        pass
+
+    @abstractmethod
+    async def get_batch(self, batch_id: int) -> Batch | None:
+        """
+        Retorna o batch completo (com tasks resumidas) solicitada
         """
         pass
 
