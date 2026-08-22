@@ -51,6 +51,67 @@ TASK_STATUS_FAILED: TaskStatus.ValueType  # 8
 TASK_STATUS_REQUEUED: TaskStatus.ValueType  # 9
 Global___TaskStatus: _TypeAlias = TaskStatus  # noqa: Y015
 
+class _TaskAttemptStatus:
+    ValueType = _typing.NewType("ValueType", _builtins.int)
+    V: _TypeAlias = ValueType  # noqa: Y015
+
+class _TaskAttemptStatusEnumTypeWrapper(_enum_type_wrapper._EnumTypeWrapper[_TaskAttemptStatus.ValueType], _builtins.type):
+    DESCRIPTOR: _descriptor.EnumDescriptor
+    TASK_ATTEMPT_STATUS_UNSPECIFIED: _TaskAttemptStatus.ValueType  # 0
+    TASK_ATTEMPT_STATUS_PENDING: _TaskAttemptStatus.ValueType  # 1
+    TASK_ATTEMPT_STATUS_RUNNING: _TaskAttemptStatus.ValueType  # 2
+    TASK_ATTEMPT_STATUS_SUCCESS: _TaskAttemptStatus.ValueType  # 3
+    TASK_ATTEMPT_STATUS_FAILED: _TaskAttemptStatus.ValueType  # 4
+    TASK_ATTEMPT_STATUS_TIMED_OUT: _TaskAttemptStatus.ValueType  # 5
+    TASK_ATTEMPT_STATUS_CANCELLED: _TaskAttemptStatus.ValueType  # 6
+
+class TaskAttemptStatus(_TaskAttemptStatus, metaclass=_TaskAttemptStatusEnumTypeWrapper): ...
+
+TASK_ATTEMPT_STATUS_UNSPECIFIED: TaskAttemptStatus.ValueType  # 0
+TASK_ATTEMPT_STATUS_PENDING: TaskAttemptStatus.ValueType  # 1
+TASK_ATTEMPT_STATUS_RUNNING: TaskAttemptStatus.ValueType  # 2
+TASK_ATTEMPT_STATUS_SUCCESS: TaskAttemptStatus.ValueType  # 3
+TASK_ATTEMPT_STATUS_FAILED: TaskAttemptStatus.ValueType  # 4
+TASK_ATTEMPT_STATUS_TIMED_OUT: TaskAttemptStatus.ValueType  # 5
+TASK_ATTEMPT_STATUS_CANCELLED: TaskAttemptStatus.ValueType  # 6
+Global___TaskAttemptStatus: _TypeAlias = TaskAttemptStatus  # noqa: Y015
+
+@_typing.final
+class TaskAttemptProto(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
+
+    ID_FIELD_NUMBER: _builtins.int
+    WORKER_ID_FIELD_NUMBER: _builtins.int
+    STATUS_FIELD_NUMBER: _builtins.int
+    STARTED_AT_FIELD_NUMBER: _builtins.int
+    FINISHED_AT_FIELD_NUMBER: _builtins.int
+    LOGS_FIELD_NUMBER: _builtins.int
+    id: _builtins.int
+    worker_id: _builtins.str
+    status: Global___TaskAttemptStatus.ValueType
+    logs: _builtins.str
+    @_builtins.property
+    def started_at(self) -> _timestamp_pb2.Timestamp: ...
+    @_builtins.property
+    def finished_at(self) -> _timestamp_pb2.Timestamp: ...
+    def __init__(
+        self,
+        *,
+        id: _builtins.int = ...,
+        worker_id: _builtins.str = ...,
+        status: Global___TaskAttemptStatus.ValueType = ...,
+        started_at: _timestamp_pb2.Timestamp | None = ...,
+        finished_at: _timestamp_pb2.Timestamp | None = ...,
+        logs: _builtins.str = ...,
+    ) -> None: ...
+    _HasFieldArgType: _TypeAlias = _typing.Literal["finished_at", b"finished_at", "started_at", b"started_at"]  # noqa: Y015
+    def HasField(self, field_name: _HasFieldArgType) -> _builtins.bool: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["finished_at", b"finished_at", "id", b"id", "logs", b"logs", "started_at", b"started_at", "status", b"status", "worker_id", b"worker_id"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
+    def WhichOneof(self, oneof_group: _Never) -> None: ...
+
+Global___TaskAttemptProto: _TypeAlias = TaskAttemptProto  # noqa: Y015
+
 @_typing.final
 class TaskLiteProto(_message.Message):
     DESCRIPTOR: _descriptor.Descriptor
@@ -93,6 +154,7 @@ class TaskFullProto(_message.Message):
     ATTEMPT_COUNT_FIELD_NUMBER: _builtins.int
     RESULT_FIELD_NUMBER: _builtins.int
     ARTIFACT_JSON_FIELD_NUMBER: _builtins.int
+    ATTEMPTS_FIELD_NUMBER: _builtins.int
     id: _builtins.int
     filename: _builtins.str
     status: Global___TaskStatus.ValueType
@@ -100,6 +162,8 @@ class TaskFullProto(_message.Message):
     attempt_count: _builtins.int
     result: _builtins.str
     artifact_json: _builtins.str
+    @_builtins.property
+    def attempts(self) -> _containers.RepeatedCompositeFieldContainer[Global___TaskAttemptProto]: ...
     def __init__(
         self,
         *,
@@ -110,10 +174,11 @@ class TaskFullProto(_message.Message):
         attempt_count: _builtins.int = ...,
         result: _builtins.str = ...,
         artifact_json: _builtins.str = ...,
+        attempts: _abc.Iterable[Global___TaskAttemptProto] | None = ...,
     ) -> None: ...
     _HasFieldArgType: _TypeAlias = _Never  # noqa: Y015
     def HasField(self, field_name: _HasFieldArgType) -> _builtins.bool: ...
-    _ClearFieldArgType: _TypeAlias = _typing.Literal["artifact_json", b"artifact_json", "attempt_count", b"attempt_count", "filename", b"filename", "id", b"id", "result", b"result", "size", b"size", "status", b"status"]  # noqa: Y015
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["artifact_json", b"artifact_json", "attempt_count", b"attempt_count", "attempts", b"attempts", "filename", b"filename", "id", b"id", "result", b"result", "size", b"size", "status", b"status"]  # noqa: Y015
     def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
     def WhichOneof(self, oneof_group: _Never) -> None: ...
 

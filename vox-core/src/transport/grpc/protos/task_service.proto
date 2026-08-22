@@ -2,9 +2,7 @@ syntax = "proto3";
 
 package task_service;
 
-
 import "google/protobuf/timestamp.proto";
-
 
 enum TaskStatus {
   TASK_STATUS_UNSPECIFIED = 0;
@@ -17,6 +15,25 @@ enum TaskStatus {
   TASK_STATUS_SUCCEEDED = 7;
   TASK_STATUS_FAILED = 8;
   TASK_STATUS_REQUEUED = 9;
+}
+
+enum TaskAttemptStatus {
+  TASK_ATTEMPT_STATUS_UNSPECIFIED = 0;
+  TASK_ATTEMPT_STATUS_PENDING = 1;
+  TASK_ATTEMPT_STATUS_RUNNING = 2;
+  TASK_ATTEMPT_STATUS_SUCCESS = 3;
+  TASK_ATTEMPT_STATUS_FAILED = 4;
+  TASK_ATTEMPT_STATUS_TIMED_OUT = 5;
+  TASK_ATTEMPT_STATUS_CANCELLED = 6;
+}
+
+message TaskAttemptProto {
+  int64 id = 1;
+  string worker_id = 2;
+  TaskAttemptStatus status = 3;
+  google.protobuf.Timestamp started_at = 4;
+  google.protobuf.Timestamp finished_at = 5;
+  string logs = 6;
 }
 
 message TaskLiteProto {
@@ -35,6 +52,7 @@ message TaskFullProto {
   int32 attempt_count = 5;
   string result = 6;
   string artifact_json = 7;
+  repeated TaskAttemptProto attempts = 8;
 }
 
 message BatchLiteProto {
