@@ -39,7 +39,7 @@ class TaskAttempt:
 
     @property
     def id(self) -> int:
-        if self.id == None:
+        if self._id == None:
             raise ValueError(
                 "Tentativa de acessar o id de uma tentativa não persistida."
             )
