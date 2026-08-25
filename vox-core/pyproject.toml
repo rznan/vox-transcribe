@@ -25,3 +25,10 @@ dev = [
 include = ["src"]
 extraPaths = ["src", "src/transport/grpc/generated"]
 typeCheckingMode = "standard"
+
+[tool.pytest.ini_options]
+pythonpath = [
+    ".",
+    "src",
+    "src/transport/grpc/generated"
+]
