@@ -81,13 +81,13 @@ class Task:
             raise ValueError("Tentativa de acessar o id de uma Task não persistida.")
         return self._batch_id
 
-    def create_attempt(self) -> TaskAttempt:
+    def create_attempt(self, worker_id: UUID) -> TaskAttempt:
         if self.id != None:
 
             attempt = TaskAttempt(
                 _id=None,
                 task_id=self.id,
-                worker_id=None,
+                worker_id=worker_id,
                 status=TaskAttemptStatus.PENDING,
             )
 

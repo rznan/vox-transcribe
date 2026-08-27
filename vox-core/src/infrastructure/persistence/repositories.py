@@ -30,10 +30,6 @@ M = TypeVar("M")
 # id da entidade de domínio
 ID = TypeVar("ID")
 
-# TODO: fazer os stmts serem campos para poder modificar mais fácilmente as querries quando algo
-# específico for necessário para atingir o resultado esperado. P.ex. retornar taskAttempts sempre
-# nas Tasks
-
 
 class BaseRepository(rc.BaseRepository[T, ID], Generic[T, M, ID]):
 
@@ -56,7 +52,7 @@ class BaseRepository(rc.BaseRepository[T, ID], Generic[T, M, ID]):
         return self.to_domain(model)
 
     async def delete(self, id: ID) -> bool:
-        model = self.session.get(self.model_cls, id)
+        model = await self.session.get(self.model_cls, id)
 
         if model is None:
             return False

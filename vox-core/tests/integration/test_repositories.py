@@ -68,6 +68,42 @@ async def test_add_and_get_task(async_session: AsyncSession):
 
 
 @pytest.mark.asyncio
+async def test_add_and_get_task_with_attempts(async_session: AsyncSession):
+    batch_repo = BatchRepository(async_session)
+    task_repo = TaskRepository(async_session)
+
+    # 1. Cria Lote Relacionado
+    batch = Batch(created_at=datetime.now(timezone.utc))
+    result = await batch_repo.add(batch)
+
+    # 2. Cria Entidade Task
+    task = Task(
+        _batch_id=result.id,
+        status=TaskStatus.SUBMITTED,
+        artifact={"cmd": "echo hello"},
+        filename="input.txt",
+        size=512,
+    )
+
+    # 3. Executa a Inserção via Repositório
+    saved_task = await task_repo.add(task)
+    assert saved_task.id == 1
+
+    # 4. Busca a Task pelo ID
+    retrieved_task = await task_repo.get_by_id(saved_task.id)
+
+    assert retrieved_task is not None
+
+    # 5. cria uma attempt
+    worker_id = uuid4()
+    retrieved_task.create_attempt(worker_id)
+
+    assert retrieved_task.id == 1
+    assert len(retrieved_task.attempts) == 1
+    assert retrieved_task.attempts[0].worker_id == worker_id
+
+
+@pytest.mark.asyncio
 async def test_add_with_insertion_from_batch(async_session: AsyncSession):
     batch_repo = BatchRepository(async_session)
     task_repo = TaskRepository(async_session)
