@@ -69,8 +69,12 @@ class TestTaskGrpcServiceImpl:
         context.abort = AsyncMock(side_effect=MockRpcError)
         return context
 
+    # ==========================================
+    # GetBatch
+    # ==========================================
+
     @pytest.mark.asyncio
-    async def test_get_batch_with_available_batch(
+    async def test_get_batch_with_data(
         self,
         servicer: TaskGrpcServiceImpl,
         mock_task_service,
@@ -86,7 +90,7 @@ class TestTaskGrpcServiceImpl:
         assert response.batch.total_jobs_number == 1
 
     @pytest.mark.asyncio
-    async def test_get_batch_with_no_available_batch(
+    async def test_get_batch_empty(
         self,
         servicer: TaskGrpcServiceImpl,
         mock_task_service,
@@ -103,25 +107,198 @@ class TestTaskGrpcServiceImpl:
             grpc.StatusCode.NOT_FOUND, f"Batch {id} não encontrado."
         )
 
-    # Test Cases para Implementar:
-    # SubmitBatch:
-    #   1. dados corretos passam corretamente
-    #   2. algum dado errado para testar valueError
-    #   3. lançar exceção para testar um erro interno ao submter
-    # GetBatch:
-    #   1. batch existe                                             [ x ]
-    #   2. batch não existe                                         [ x ]
-    # GetTask:
-    #   1. Task existe
-    #   2. Task não existe
-    # ListBatches:
-    #   1. com batches existentes
-    #   2. sem batches existentes
-    #   5. offset out of range
-    #   4. limite inválido
-    # CancelBatch:
-    #   1. batch existe
-    #   2. batch não existe
-    # DeleteBatch:
-    #   1. batch existe
-    #   2. batch não existe
+    # ==========================================
+    # SubmitBatch
+    # ==========================================
+
+    @pytest.mark.asyncio
+    async def test_submit_batch_success(
+        self,
+        servicer: TaskGrpcServiceImpl,
+        mock_task_service,
+        sample_batch,
+        mock_context,
+    ):
+        request = pb2.SubmitBatchRequestProto(
+            tasks=[
+                pb2.SubmitTaskRequestProto(
+                    artifact_json='{"cmd": "run"}', filename="test.txt", size=1024
+                )
+            ]
+        )
+        mock_task_service.create_batch.return_value = sample_batch
+
+        response = await servicer.SubmitBatch(request, mock_context)
+
+        assert response.batch_id == sample_batch.id
+
+        mock_task_service.create_batch.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_submit_batch_value_error(
+        self, servicer: TaskGrpcServiceImpl, mock_task_service, mock_context
+    ):
+        request = pb2.SubmitBatchRequestProto()
+        # Força o mock a levantar um ValueError para simular dados inválidos
+        mock_task_service.create_batch.side_effect = ValueError(
+            "Dados inválidos no batch"
+        )
+
+        with pytest.raises(MockRpcError):
+            await servicer.SubmitBatch(request, mock_context)
+
+        mock_context.abort.assert_awaited_once_with(
+            grpc.StatusCode.INVALID_ARGUMENT, "Dados inválidos no batch"
+        )
+
+    @pytest.mark.asyncio
+    async def test_submit_batch_internal_error(
+        self, servicer: TaskGrpcServiceImpl, mock_task_service, mock_context
+    ):
+        request = pb2.SubmitBatchRequestProto()
+        # Força o mock a levantar uma exceção genérica
+        mock_task_service.create_batch.side_effect = Exception(
+            "Falha catastrófica no banco"
+        )
+
+        with pytest.raises(MockRpcError):
+            await servicer.SubmitBatch(request, mock_context)
+
+        mock_context.abort.assert_awaited_once_with(
+            grpc.StatusCode.INTERNAL, "Erro interno ao processar a submissão do lote."
+        )
+
+    # ==========================================
+    # GetTask
+    # ==========================================
+
+    @pytest.mark.asyncio
+    async def test_get_task_exists(
+        self,
+        servicer: TaskGrpcServiceImpl,
+        mock_task_service,
+        sample_task,
+        mock_context,
+    ):
+        mock_task_service.get_task.return_value = sample_task
+        request = pb2.GetTaskRequestProto(task_id=sample_task.id)
+
+        response = await servicer.GetTask(request, mock_context)
+
+        assert response.task.id == sample_task.id
+        assert response.task.filename == sample_task.filename
+
+    @pytest.mark.asyncio
+    async def test_get_task_not_exists(
+        self, servicer: TaskGrpcServiceImpl, mock_task_service, mock_context
+    ):
+        mock_task_service.get_task.return_value = None
+        request = pb2.GetTaskRequestProto(task_id=999)
+
+        with pytest.raises(MockRpcError):
+            await servicer.GetTask(request, mock_context)
+
+        mock_context.abort.assert_awaited_once_with(
+            grpc.StatusCode.NOT_FOUND, "Task 999 não encontrada."
+        )
+
+    # ==========================================
+    # ListBatches
+    # ==========================================
+
+    @pytest.mark.asyncio
+    async def test_list_batches_with_data(
+        self,
+        servicer: TaskGrpcServiceImpl,
+        mock_task_service,
+        sample_batch,
+        mock_context,
+    ):
+        mock_task_service.list_batches.return_value = [sample_batch]
+        request = pb2.ListBatchesRequestProto(limit=10, offset=0)
+
+        response = await servicer.ListBatches(request, mock_context)
+
+        assert len(response.batches) == 1
+        assert response.batches[0].id == sample_batch.id
+        mock_task_service.list_batches.assert_awaited_once_with(limit=10, offset=0)
+
+    @pytest.mark.asyncio
+    async def test_list_batches_empty(
+        self, servicer: TaskGrpcServiceImpl, mock_task_service, mock_context
+    ):
+        mock_task_service.list_batches.return_value = []
+        request = pb2.ListBatchesRequestProto(limit=10, offset=0)
+
+        response = await servicer.ListBatches(request, mock_context)
+
+        assert len(response.batches) == 0
+
+    # ==========================================
+    # CancelBatch
+    # ==========================================
+
+    @pytest.mark.asyncio
+    async def test_cancel_batch_exists(
+        self,
+        servicer: TaskGrpcServiceImpl,
+        mock_task_service,
+        sample_batch,
+        mock_context,
+    ):
+        mock_task_service.get_batch.return_value = sample_batch
+        mock_task_service.cancel_batch.return_value = sample_batch
+        request = pb2.CancelBatchRequestProto(batch_id=sample_batch.id)
+
+        response = await servicer.CancelBatch(request, mock_context)
+
+        assert response.batch.id == sample_batch.id
+        mock_task_service.cancel_batch.assert_awaited_once_with(sample_batch.id)
+
+    @pytest.mark.asyncio
+    async def test_cancel_batch_not_exists(
+        self, servicer: TaskGrpcServiceImpl, mock_task_service, mock_context
+    ):
+        mock_task_service.get_batch.return_value = None
+        request = pb2.CancelBatchRequestProto(batch_id=999)
+
+        with pytest.raises(MockRpcError):
+            await servicer.CancelBatch(request, mock_context)
+
+        mock_context.abort.assert_awaited_once_with(
+            grpc.StatusCode.NOT_FOUND, "Batch 999 não encontrado."
+        )
+
+    # ==========================================
+    # DeleteBatch
+    # ==========================================
+
+    @pytest.mark.asyncio
+    async def test_delete_batch_exists(
+        self,
+        servicer: TaskGrpcServiceImpl,
+        mock_task_service,
+        sample_batch,
+        mock_context,
+    ):
+        mock_task_service.get_batch.return_value = sample_batch
+        request = pb2.DeleteBatchRequestProto(batch_id=sample_batch.id)
+
+        response = await servicer.DeleteBatch(request, mock_context)
+
+        assert response.success is True
+        mock_task_service.delete_batch.assert_awaited_once_with(sample_batch.id)
+
+    @pytest.mark.asyncio
+    async def test_delete_batch_not_exists(
+        self, servicer: TaskGrpcServiceImpl, mock_task_service, mock_context
+    ):
+        mock_task_service.get_batch.return_value = None
+        request = pb2.DeleteBatchRequestProto(batch_id=999)
+
+        with pytest.raises(MockRpcError):
+            await servicer.DeleteBatch(request, mock_context)
+
+        mock_context.abort.assert_awaited_once_with(
+            grpc.StatusCode.NOT_FOUND, "Batch 999 não encontrado para exclusão."
+        )
