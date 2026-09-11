@@ -121,11 +121,13 @@ class TaskLiteProto(_message.Message):
     STATUS_FIELD_NUMBER: _builtins.int
     SIZE_FIELD_NUMBER: _builtins.int
     ATTEMPT_COUNT_FIELD_NUMBER: _builtins.int
+    LANGUAGE_FIELD_NUMBER: _builtins.int
     id: _builtins.int
     filename: _builtins.str
     status: Global___TaskStatus.ValueType
     size: _builtins.int
     attempt_count: _builtins.int
+    language: _builtins.str
     def __init__(
         self,
         *,
@@ -134,10 +136,11 @@ class TaskLiteProto(_message.Message):
         status: Global___TaskStatus.ValueType = ...,
         size: _builtins.int = ...,
         attempt_count: _builtins.int = ...,
+        language: _builtins.str = ...,
     ) -> None: ...
     _HasFieldArgType: _TypeAlias = _Never  # noqa: Y015
     def HasField(self, field_name: _HasFieldArgType) -> _builtins.bool: ...
-    _ClearFieldArgType: _TypeAlias = _typing.Literal["attempt_count", b"attempt_count", "filename", b"filename", "id", b"id", "size", b"size", "status", b"status"]  # noqa: Y015
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["attempt_count", b"attempt_count", "filename", b"filename", "id", b"id", "language", b"language", "size", b"size", "status", b"status"]  # noqa: Y015
     def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
     def WhichOneof(self, oneof_group: _Never) -> None: ...
 
@@ -154,6 +157,7 @@ class TaskFullProto(_message.Message):
     ATTEMPT_COUNT_FIELD_NUMBER: _builtins.int
     RESULT_FIELD_NUMBER: _builtins.int
     ARTIFACT_JSON_FIELD_NUMBER: _builtins.int
+    LANGUAGE_FIELD_NUMBER: _builtins.int
     ATTEMPTS_FIELD_NUMBER: _builtins.int
     id: _builtins.int
     filename: _builtins.str
@@ -162,6 +166,7 @@ class TaskFullProto(_message.Message):
     attempt_count: _builtins.int
     result: _builtins.str
     artifact_json: _builtins.str
+    language: _builtins.str
     @_builtins.property
     def attempts(self) -> _containers.RepeatedCompositeFieldContainer[Global___TaskAttemptProto]: ...
     def __init__(
@@ -174,11 +179,12 @@ class TaskFullProto(_message.Message):
         attempt_count: _builtins.int = ...,
         result: _builtins.str = ...,
         artifact_json: _builtins.str = ...,
+        language: _builtins.str = ...,
         attempts: _abc.Iterable[Global___TaskAttemptProto] | None = ...,
     ) -> None: ...
     _HasFieldArgType: _TypeAlias = _Never  # noqa: Y015
     def HasField(self, field_name: _HasFieldArgType) -> _builtins.bool: ...
-    _ClearFieldArgType: _TypeAlias = _typing.Literal["artifact_json", b"artifact_json", "attempt_count", b"attempt_count", "attempts", b"attempts", "filename", b"filename", "id", b"id", "result", b"result", "size", b"size", "status", b"status"]  # noqa: Y015
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["artifact_json", b"artifact_json", "attempt_count", b"attempt_count", "attempts", b"attempts", "filename", b"filename", "id", b"id", "language", b"language", "result", b"result", "size", b"size", "status", b"status"]  # noqa: Y015
     def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
     def WhichOneof(self, oneof_group: _Never) -> None: ...
 
@@ -255,19 +261,22 @@ class SubmitTaskRequestProto(_message.Message):
     ARTIFACT_JSON_FIELD_NUMBER: _builtins.int
     FILENAME_FIELD_NUMBER: _builtins.int
     SIZE_FIELD_NUMBER: _builtins.int
+    LANGUAGE_FIELD_NUMBER: _builtins.int
     artifact_json: _builtins.str
     filename: _builtins.str
     size: _builtins.int
+    language: _builtins.str
     def __init__(
         self,
         *,
         artifact_json: _builtins.str = ...,
         filename: _builtins.str = ...,
         size: _builtins.int = ...,
+        language: _builtins.str = ...,
     ) -> None: ...
     _HasFieldArgType: _TypeAlias = _Never  # noqa: Y015
     def HasField(self, field_name: _HasFieldArgType) -> _builtins.bool: ...
-    _ClearFieldArgType: _TypeAlias = _typing.Literal["artifact_json", b"artifact_json", "filename", b"filename", "size", b"size"]  # noqa: Y015
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["artifact_json", b"artifact_json", "filename", b"filename", "language", b"language", "size", b"size"]  # noqa: Y015
     def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
     def WhichOneof(self, oneof_group: _Never) -> None: ...
 

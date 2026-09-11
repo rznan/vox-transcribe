@@ -61,6 +61,8 @@ class Task:
 
     _id: int | None = None
 
+    language: str = "pt-br"
+
     result_text: str | None = None
 
     attempts: list[TaskAttempt] = field(default_factory=list)

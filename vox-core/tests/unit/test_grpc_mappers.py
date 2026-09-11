@@ -27,6 +27,7 @@ def sample_task() -> Task:
         status=TaskStatus.SUBMITTED,
         artifact={"cmd": "echo hello"},
         filename="input.txt",
+        language="pt-br",
         size=512,
     )
 
@@ -58,7 +59,10 @@ def sample_batch(sample_task: Task) -> Batch:
 
 def test_submit_task_request_to_domain_valid_json():
     request = pb2.SubmitTaskRequestProto(
-        filename="test.txt", size=500, artifact_json='{"key": "value"}'
+        filename="test.txt",
+        size=500,
+        artifact_json='{"key": "value"}',
+        language="pt-br",
     )
 
     task = submit_task_request_to_domain(request)
@@ -68,6 +72,7 @@ def test_submit_task_request_to_domain_valid_json():
     assert task.filename == "test.txt"
     assert task.size == 500
     assert task.artifact == {"key": "value"}
+    assert task.language == "pt-br"
     # O ID começa nulo na criação antes de persistir
     with pytest.raises(ValueError):
         _ = task.id
@@ -75,7 +80,7 @@ def test_submit_task_request_to_domain_valid_json():
 
 def test_submit_task_request_to_domain_invalid_json():
     request = pb2.SubmitTaskRequestProto(
-        filename="test.txt", size=500, artifact_json="invalid-json"
+        filename="test.txt", size=500, artifact_json="invalid-json", language="pt-br"
     )
 
     task = submit_task_request_to_domain(request)
@@ -123,6 +128,7 @@ def test_task_domain_to_lite_proto(sample_task: Task):
     assert proto.filename == "input.txt"
     assert proto.size == 512
     assert proto.attempt_count == 1
+    assert proto.language == "pt-br"
     assert proto.status == pb2.TASK_STATUS_SUBMITTED
 
 
@@ -151,6 +157,7 @@ def test_task_domain_to_full_proto(sample_task: Task):
     assert proto.attempts[0].id == 1
     assert proto.attempts[0].status == pb2.TASK_ATTEMPT_STATUS_PENDING
     assert proto.result == "testes"
+    assert proto.language == "pt-br"
     assert json.loads(proto.artifact_json) == {"cmd": "echo hello"}
 
 

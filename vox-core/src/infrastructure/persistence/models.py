@@ -64,6 +64,11 @@ class TaskModel(Base):
         nullable=False,
     )
 
+    language: Mapped[str] = mapped_column(
+        String(15),
+        nullable=False,
+    )
+
     size: Mapped[int] = mapped_column(
         Integer,
         nullable=False,

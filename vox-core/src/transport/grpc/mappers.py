@@ -46,6 +46,7 @@ def submit_task_request_to_domain(request: pb2.SubmitTaskRequestProto) -> Task:
         artifact=artifact_data,
         filename=request.filename,
         size=request.size,
+        language=request.language
     )
 
 
@@ -74,6 +75,7 @@ def task_domain_to_lite_proto(task: Task) -> pb2.TaskLiteProto:
         status=proto_status,
         size=task.size,
         attempt_count=len(attempts),
+        language=task.language,
     )
 
 
@@ -124,6 +126,7 @@ def task_domain_to_full_proto(task: Task) -> pb2.TaskFullProto:
         status=proto_status,
         size=task.size,
         attempt_count=len(attempts),
+        language=task.language,
         result=getattr(task, "result_text", "") or "",
         artifact_json=artifact_json_str,
         attempts=[attempt_domain_to_proto(a) for a in attempts],
