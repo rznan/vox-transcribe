@@ -21,6 +21,7 @@ def sample_worker() -> Worker:
         runtime=WorkerRuntime.GPU,
         simultaneous_capacity=2,
         status=WorkerStatus.IDLE,
+        languages_supported=["en", "pt"],
     )
 
 
@@ -37,6 +38,7 @@ def sample_worker_list(sample_worker: Worker) -> list[Worker]:
             runtime=WorkerRuntime.CPU,
             simultaneous_capacity=2,
             status=WorkerStatus.IDLE,
+            languages_supported=["en"],
         ),
     ]
 
@@ -52,7 +54,8 @@ def test_register_new_worker(balancer: RoundRobinLoadBalancer, sample_worker: Wo
     balancer.register(sample_worker)
 
     assert sample_worker.id in balancer.workers
-    assert sample_worker.id in balancer.worker_id_deque
+    assert sample_worker.id in balancer.language_deques["en"]
+    assert sample_worker.id in balancer.language_deques["pt"]
 
 
 def test_register_existing_worker_does_not_duplicate(
@@ -63,7 +66,7 @@ def test_register_existing_worker_does_not_duplicate(
     balancer.register(sample_worker)  # Chamada duplicada proposital
 
     assert len(balancer.workers) == 1
-    assert list(balancer.worker_id_deque).count(sample_worker.id) == 1
+    assert list(balancer.language_deques["en"]).count(sample_worker.id) == 1
 
 
 def test_register_worker_in_removal_set(
@@ -76,11 +79,11 @@ def test_register_worker_in_removal_set(
 
     # Ao remover w2 (que não é o índice 0 da fila), ele vai para o set de remoção
     balancer.unregister(w2.id)
-    assert w2.id in balancer.to_be_removed_worker_id_set
+    assert w2.id in balancer.to_be_removed_worker_id_sets["en"]
 
     # Ao registrar novamente, ele deve sair do set de remoção
     balancer.register(w2)
-    assert w2.id not in balancer.to_be_removed_worker_id_set
+    assert w2.id not in balancer.to_be_removed_worker_id_sets["en"]
 
 
 def test_unregister_worker_at_top(
@@ -91,7 +94,7 @@ def test_unregister_worker_at_top(
     balancer.unregister(sample_worker.id)
 
     assert sample_worker.id not in balancer.workers
-    assert len(balancer.worker_id_deque) == 0
+    assert len(balancer.language_deques["en"]) == 0
 
 
 def test_unregister_worker_returns_the_worker(
@@ -123,17 +126,15 @@ async def test_unregister_worker_not_at_top_removes_later(
 
     # Ele ainda deve estar na fila, mas marcado para remover e fora do dict principal
     assert w2.id not in balancer.workers
-    assert w2.id in balancer.worker_id_deque
-    assert w2.id in balancer.to_be_removed_worker_id_set
+    assert w2.id in balancer.language_deques["en"]
+    assert w2.id in balancer.to_be_removed_worker_id_sets["en"]
 
     # Simulamos o balanceador rodando.
-    # O primeiro chamada retorna w1. A segunda chamada vai avaliar w2, removê-lo de vez
-    # e acabar retornando w1 novamente.
-    await balancer.get_worker()
-    await balancer.get_worker()
+    await balancer.get_worker("en")
+    await balancer.get_worker("en")
 
-    assert w2.id not in balancer.worker_id_deque
-    assert w2.id not in balancer.to_be_removed_worker_id_set
+    assert w2.id not in balancer.language_deques["en"]
+    assert w2.id not in balancer.to_be_removed_worker_id_sets["en"]
 
 
 @pytest.mark.asyncio
@@ -145,7 +146,7 @@ async def test_get_worker_idle(
     balancer.register(sample_worker)
     sample_worker.current_workload = 0
 
-    worker = await balancer.get_worker()
+    worker = await balancer.get_worker("en")
     assert worker == sample_worker
 
 
@@ -163,9 +164,9 @@ async def test_get_worker_skips_removed_until_blocks(
 
     # A fila vai se esvaziar pois todos os workers na fila estão no set de remoção.
     with pytest.raises(asyncio.TimeoutError):
-        await asyncio.wait_for(balancer.get_worker(), timeout=0.1)
+        await asyncio.wait_for(balancer.get_worker("en"), timeout=0.1)
 
-    assert len(balancer.worker_id_deque) == 0
+    assert len(balancer.language_deques["en"]) == 0
 
 
 @pytest.mark.asyncio
@@ -178,9 +179,9 @@ async def test_get_worker_full_removes_from_deque_and_blocks(
     sample_worker.current_workload = sample_worker.simultaneous_capacity
 
     with pytest.raises(asyncio.TimeoutError):
-        await asyncio.wait_for(balancer.get_worker(), timeout=0.1)
+        await asyncio.wait_for(balancer.get_worker("en"), timeout=0.1)
 
-    assert sample_worker.id not in balancer.worker_id_deque
+    assert sample_worker.id not in balancer.language_deques["en"]
     assert sample_worker.id in balancer.full_worker_id_set
 
 
@@ -196,13 +197,13 @@ async def test_mark_worker_as_available_inserts_in_deque(
     sample_worker.current_workload = sample_worker.simultaneous_capacity
 
     with pytest.raises(asyncio.TimeoutError):
-        await asyncio.wait_for(balancer.get_worker(), timeout=0.1)
+        await asyncio.wait_for(balancer.get_worker("en"), timeout=0.1)
 
     # Faz o worker se tornar disponível
     sample_worker.current_workload -= 1
     balancer.mark_worker_as_available(sample_worker.id)
 
-    assert sample_worker.id in balancer.worker_id_deque
+    assert sample_worker.id in balancer.language_deques["en"]
     assert sample_worker.id not in balancer.full_worker_id_set
 
 
@@ -213,13 +214,13 @@ def test_mark_worker_as_available_ignores_if_full(
     """Testa marcar worker disponível não insere-o na fila se ele não estiver disponível."""
     balancer.register(sample_worker)
 
-    balancer.worker_id_deque.remove(sample_worker.id)
+    balancer.language_deques["en"].remove(sample_worker.id)
     balancer.full_worker_id_set.add(sample_worker.id)
 
     sample_worker.current_workload = sample_worker.simultaneous_capacity
     balancer.mark_worker_as_available(sample_worker.id)
 
-    assert sample_worker.id not in balancer.worker_id_deque
+    assert sample_worker.id not in balancer.language_deques["en"]
     assert sample_worker.id in balancer.full_worker_id_set
 
 

@@ -1,7 +1,6 @@
 import asyncio
-
 from abc import ABC, abstractmethod
-from collections import deque
+from collections import deque, defaultdict
 from uuid import UUID
 
 from src.domain.entities import Worker
@@ -26,8 +25,8 @@ class LoadBalancer(ABC):
         pass
 
     @abstractmethod
-    async def get_worker(self) -> Worker:
-        """Retorna um worker disponível"""
+    async def get_worker(self, language: str) -> Worker:
+        """Retorna um worker disponível com base na linguagem solicitada"""
         pass
 
     @abstractmethod
@@ -40,21 +39,28 @@ class RoundRobinLoadBalancer(LoadBalancer):
 
     def __init__(self) -> None:
         self.workers: dict[UUID, Worker] = dict()
-        self.worker_id_deque: deque[UUID] = deque()
-        self.to_be_removed_worker_id_set: set[UUID] = set()
+
+        self.language_deques: dict[str, deque[UUID]] = defaultdict(deque)
+
+        self.to_be_removed_worker_id_sets: dict[str, set[UUID]] = defaultdict(set)
+
         self.full_worker_id_set: set[UUID] = set()
 
-        self._worker_available = asyncio.Event()
+        self._worker_available_events: dict[str, asyncio.Event] = defaultdict(
+            asyncio.Event
+        )
 
     def register(self, worker: Worker) -> None:
         if worker.id not in self.workers:
             self.workers[worker.id] = worker
-            self.worker_id_deque.append(worker.id)
-            self.to_be_removed_worker_id_set.discard(worker.id)
             self.full_worker_id_set.discard(worker.id)
 
-            if worker.is_available():
-                self._worker_available.set()
+            for lang in worker.languages_supported:
+                self.language_deques[lang].append(worker.id)
+                self.to_be_removed_worker_id_sets[lang].discard(worker.id)
+
+                if worker.is_available():
+                    self._worker_available_events[lang].set()
 
     def unregister(self, worker_id: UUID) -> Worker:
         if worker_id not in self.workers:
@@ -63,40 +69,46 @@ class RoundRobinLoadBalancer(LoadBalancer):
             )
 
         worker = self.workers.pop(worker_id)
+        self.full_worker_id_set.discard(worker_id)
 
-        if self.worker_id_deque[0] == worker_id:
-            self.worker_id_deque.popleft()
-        else:
-            self.to_be_removed_worker_id_set.add(worker_id)
-            self.full_worker_id_set.discard(worker_id)
+        # Remove o worker de todas as filas de linguagem às quais ele pertence
+        for lang in worker.languages_supported:
+            if (
+                self.language_deques[lang]
+                and self.language_deques[lang][0] == worker_id
+            ):
+                self.language_deques[lang].popleft()
+            else:
+                self.to_be_removed_worker_id_sets[lang].add(worker_id)
 
         return worker
 
-    async def get_worker(self) -> Worker:
+    async def get_worker(self, language: str) -> Worker:
         while True:
-            if not self.worker_id_deque:
-                self._worker_available.clear()
-                await self._worker_available.wait()
+            lang_deque = self.language_deques[language]
+
+            if not lang_deque:
+                self._worker_available_events[language].clear()
+                await self._worker_available_events[language].wait()
                 continue
 
-            worker_id = self.worker_id_deque[0]
+            worker_id = lang_deque[0]
 
-            # Remove workers desregistrados da fila
-            if worker_id in self.to_be_removed_worker_id_set:
-                self.worker_id_deque.popleft()
-                self.to_be_removed_worker_id_set.remove(worker_id)
+            # Remove workers desregistrados da fila específica
+            if worker_id in self.to_be_removed_worker_id_sets[language]:
+                lang_deque.popleft()
+                self.to_be_removed_worker_id_sets[language].remove(worker_id)
                 continue
 
             worker = self.workers[worker_id]
 
             # Remove workers cheios da fila
             if not worker.is_available():
-                self.worker_id_deque.popleft()
+                lang_deque.popleft()
                 self.full_worker_id_set.add(worker_id)
                 continue
 
-            # Se passou pelas validações, rotaciona a fila e retorna o worker
-            self.worker_id_deque.rotate(-1)
+            lang_deque.rotate(-1)
             return worker
 
     def mark_worker_as_available(self, worker_id: UUID) -> None:
@@ -107,6 +119,7 @@ class RoundRobinLoadBalancer(LoadBalancer):
 
         worker = self.workers[worker_id]
         if worker.is_available():
-            self.worker_id_deque.append(worker.id)
             self.full_worker_id_set.discard(worker_id)
-            self._worker_available.set()
+            for lang in worker.languages_supported:
+                self.language_deques[lang].append(worker.id)
+                self._worker_available_events[lang].set()
