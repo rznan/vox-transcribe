@@ -1,0 +1,1 @@
+uv run python -m grpc_tools.protoc -I .\grpc\protos --python_out=.\vox-core\src\transport\grpc\generated --grpc_python_out=.\vox-core\src\transport\grpc\generated --mypy_out=.\vox-core\src\transport\grpc\generated --mypy_grpc_out=.\vox-core\src\transport\grpc\generated .\grpc\protos\task_service.proto
