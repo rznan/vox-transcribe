@@ -4,34 +4,35 @@ from datetime import datetime
 from typing import List
 
 from google.protobuf.timestamp_pb2 import Timestamp
+
 from src.domain.entities import Batch, Task, TaskAttempt, TaskAttemptStatus, TaskStatus
-from src.transport.grpc.generated import task_service_pb2 as pb2
+from src.transport.grpc.generated import task_service_pb2 as task_pb2
 
 logger = logging.getLogger(__name__)
 
 STATUS_DOMAIN_TO_PROTO = {
-    TaskStatus.SUBMITTED: pb2.TASK_STATUS_SUBMITTED,
-    TaskStatus.QUEUED: pb2.TASK_STATUS_QUEUED,
-    TaskStatus.ASSIGNED: pb2.TASK_STATUS_ASSIGNED,
-    TaskStatus.RUNNING: pb2.TASK_STATUS_RUNNING,
-    TaskStatus.CANCEL_REQUESTED: pb2.TASK_STATUS_CANCEL_REQUESTED,
-    TaskStatus.CANCELLED: pb2.TASK_STATUS_CANCELLED,
-    TaskStatus.SUCCEEDED: pb2.TASK_STATUS_SUCCEEDED,
-    TaskStatus.FAILED: pb2.TASK_STATUS_FAILED,
-    TaskStatus.REQUEUED: pb2.TASK_STATUS_REQUEUED,
+    TaskStatus.SUBMITTED: task_pb2.TASK_STATUS_SUBMITTED,
+    TaskStatus.QUEUED: task_pb2.TASK_STATUS_QUEUED,
+    TaskStatus.ASSIGNED: task_pb2.TASK_STATUS_ASSIGNED,
+    TaskStatus.RUNNING: task_pb2.TASK_STATUS_RUNNING,
+    TaskStatus.CANCEL_REQUESTED: task_pb2.TASK_STATUS_CANCEL_REQUESTED,
+    TaskStatus.CANCELLED: task_pb2.TASK_STATUS_CANCELLED,
+    TaskStatus.SUCCEEDED: task_pb2.TASK_STATUS_SUCCEEDED,
+    TaskStatus.FAILED: task_pb2.TASK_STATUS_FAILED,
+    TaskStatus.REQUEUED: task_pb2.TASK_STATUS_REQUEUED,
 }
 
 STATUS_ATTEMPT_DOMAIN_TO_PROTO = {
-    TaskAttemptStatus.PENDING: pb2.TASK_ATTEMPT_STATUS_PENDING,
-    TaskAttemptStatus.RUNNING: pb2.TASK_ATTEMPT_STATUS_RUNNING,
-    TaskAttemptStatus.SUCCESS: pb2.TASK_ATTEMPT_STATUS_SUCCESS,
-    TaskAttemptStatus.FAILED: pb2.TASK_ATTEMPT_STATUS_FAILED,
-    TaskAttemptStatus.TIMED_OUT: pb2.TASK_ATTEMPT_STATUS_TIMED_OUT,
-    TaskAttemptStatus.CANCELLED: pb2.TASK_ATTEMPT_STATUS_CANCELLED,
+    TaskAttemptStatus.PENDING: task_pb2.TASK_ATTEMPT_STATUS_PENDING,
+    TaskAttemptStatus.RUNNING: task_pb2.TASK_ATTEMPT_STATUS_RUNNING,
+    TaskAttemptStatus.SUCCESS: task_pb2.TASK_ATTEMPT_STATUS_SUCCESS,
+    TaskAttemptStatus.FAILED: task_pb2.TASK_ATTEMPT_STATUS_FAILED,
+    TaskAttemptStatus.TIMED_OUT: task_pb2.TASK_ATTEMPT_STATUS_TIMED_OUT,
+    TaskAttemptStatus.CANCELLED: task_pb2.TASK_ATTEMPT_STATUS_CANCELLED,
 }
 
 
-def submit_task_request_to_domain(request: pb2.SubmitTaskRequestProto) -> Task:
+def submit_task_request_to_domain(request: task_pb2.SubmitTaskRequestProto) -> Task:
     artifact_data = {}
     if request.artifact_json:
         try:
@@ -46,30 +47,32 @@ def submit_task_request_to_domain(request: pb2.SubmitTaskRequestProto) -> Task:
         artifact=artifact_data,
         filename=request.filename,
         size=request.size,
-        language=request.language
+        language=request.language,
     )
 
 
-def submit_batch_request_to_domain(request: pb2.SubmitBatchRequestProto) -> Batch:
+def submit_batch_request_to_domain(request: task_pb2.SubmitBatchRequestProto) -> Batch:
     tasks = [submit_task_request_to_domain(t) for t in request.tasks]
     return Batch(created_at=datetime.now(), tasks=tasks)
 
 
-def batch_domain_to_submit_response(batch: Batch) -> pb2.SubmitBatchResponseProto:
+def batch_domain_to_submit_response(batch: Batch) -> task_pb2.SubmitBatchResponseProto:
     ts = Timestamp()
     ts.FromDatetime(batch.created_at)
 
-    return pb2.SubmitBatchResponseProto(
+    return task_pb2.SubmitBatchResponseProto(
         batch_id=batch.id,
         created_at=ts,
     )
 
 
-def task_domain_to_lite_proto(task: Task) -> pb2.TaskLiteProto:
-    proto_status = STATUS_DOMAIN_TO_PROTO.get(task.status, pb2.TASK_STATUS_UNSPECIFIED)
+def task_domain_to_lite_proto(task: Task) -> task_pb2.TaskLiteProto:
+    proto_status = STATUS_DOMAIN_TO_PROTO.get(
+        task.status, task_pb2.TASK_STATUS_UNSPECIFIED
+    )
     attempts = getattr(task, "attempts", [])
 
-    return pb2.TaskLiteProto(
+    return task_pb2.TaskLiteProto(
         id=task.id,
         filename=task.filename,
         status=proto_status,
@@ -79,16 +82,16 @@ def task_domain_to_lite_proto(task: Task) -> pb2.TaskLiteProto:
     )
 
 
-def attempt_domain_to_proto(attempt: TaskAttempt) -> pb2.TaskAttemptProto:
+def attempt_domain_to_proto(attempt: TaskAttempt) -> task_pb2.TaskAttemptProto:
     """
     Mapeia a entidade TaskAttempt para sua versão no gRPC.
     Lida com segurança com os IDs que possam não estar persistidos.
     """
     proto_status = STATUS_ATTEMPT_DOMAIN_TO_PROTO.get(
-        attempt.status, pb2.TASK_ATTEMPT_STATUS_UNSPECIFIED
+        attempt.status, task_pb2.TASK_ATTEMPT_STATUS_UNSPECIFIED
     )
 
-    proto = pb2.TaskAttemptProto(
+    proto = task_pb2.TaskAttemptProto(
         status=proto_status,
         worker_id=str(attempt.worker_id) if attempt.worker_id else "",
         logs=attempt.logs or "",
@@ -100,7 +103,7 @@ def attempt_domain_to_proto(attempt: TaskAttempt) -> pb2.TaskAttemptProto:
 
 
 def handle_id_and_datetime_to_proto_conversion(
-    attempt: TaskAttempt, proto: pb2.TaskAttemptProto
+    attempt: TaskAttempt, proto: task_pb2.TaskAttemptProto
 ):
     attempt_id = getattr(attempt, "_id", None)
     if attempt_id is not None:
@@ -112,15 +115,17 @@ def handle_id_and_datetime_to_proto_conversion(
         proto.finished_at.FromDatetime(attempt.finished_at)
 
 
-def task_domain_to_full_proto(task: Task) -> pb2.TaskFullProto:
-    proto_status = STATUS_DOMAIN_TO_PROTO.get(task.status, pb2.TASK_STATUS_UNSPECIFIED)
+def task_domain_to_full_proto(task: Task) -> task_pb2.TaskFullProto:
+    proto_status = STATUS_DOMAIN_TO_PROTO.get(
+        task.status, task_pb2.TASK_STATUS_UNSPECIFIED
+    )
     attempts = getattr(task, "attempts", [])
 
     # Serializa o artefato de volta para string JSON se existir
     artifact_data = getattr(task, "artifact", None)
     artifact_json_str = json.dumps(artifact_data) if artifact_data else ""
 
-    return pb2.TaskFullProto(
+    return task_pb2.TaskFullProto(
         id=task.id,
         filename=task.filename,
         status=proto_status,
@@ -133,12 +138,12 @@ def task_domain_to_full_proto(task: Task) -> pb2.TaskFullProto:
     )
 
 
-def batch_domain_to_lite_proto(batch: Batch) -> pb2.BatchLiteProto:
+def batch_domain_to_lite_proto(batch: Batch) -> task_pb2.BatchLiteProto:
     ts = Timestamp()
     ts.FromDatetime(batch.created_at)
     tasks = getattr(batch, "tasks", [])
 
-    return pb2.BatchLiteProto(
+    return task_pb2.BatchLiteProto(
         id=batch.id,
         created_at=ts,
         total_jobs_number=len(tasks),
@@ -146,12 +151,12 @@ def batch_domain_to_lite_proto(batch: Batch) -> pb2.BatchLiteProto:
     )
 
 
-def batch_domain_to_full_proto(batch: Batch) -> pb2.BatchFullProto:
+def batch_domain_to_full_proto(batch: Batch) -> task_pb2.BatchFullProto:
     ts = Timestamp()
     ts.FromDatetime(batch.created_at)
     tasks = getattr(batch, "tasks", [])
 
-    return pb2.BatchFullProto(
+    return task_pb2.BatchFullProto(
         id=batch.id,
         created_at=ts,
         total_jobs_number=len(tasks),
@@ -160,7 +165,9 @@ def batch_domain_to_full_proto(batch: Batch) -> pb2.BatchFullProto:
     )
 
 
-def list_batches_domain_to_proto(batches: List[Batch]) -> pb2.ListBatchesResponseProto:
-    return pb2.ListBatchesResponseProto(
+def list_batches_domain_to_proto(
+    batches: List[Batch],
+) -> task_pb2.ListBatchesResponseProto:
+    return task_pb2.ListBatchesResponseProto(
         batches=[batch_domain_to_lite_proto(b) for b in batches]
     )
