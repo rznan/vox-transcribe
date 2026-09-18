@@ -1,0 +1,145 @@
+syntax = "proto3";
+
+package core_worker_internal_communication;
+
+// ==========================
+// Enums baseados nas Entidades
+// ==========================
+
+// Mapeia o WorkerRuntime
+enum WorkerRuntimeProto {
+  WORKER_RUNTIME_UNSPECIFIED = 0;
+  WORKER_RUNTIME_CPU = 1;
+  WORKER_RUNTIME_GPU = 2;
+}
+
+// Mapeia o WorkerStatus 
+enum WorkerStatusProto {
+  WORKER_STATUS_UNSPECIFIED = 0;
+  WORKER_STATUS_IDLE = 1;
+  WORKER_STATUS_BUSY = 2;
+  WORKER_STATUS_FULL = 3;
+  // WORKER_STATUS_OFFLINE = 4
+}
+
+// Mapeia o TaskAttemptStatus para reportar o resultado final
+enum TaskAttemptStatusProto {
+  ATTEMPT_STATUS_UNSPECIFIED = 0;
+  ATTEMPT_STATUS_PENDING = 1;
+  ATTEMPT_STATUS_RUNNING = 2;
+  ATTEMPT_STATUS_SUCCESS = 3;
+  ATTEMPT_STATUS_FAILED = 4;
+  ATTEMPT_STATUS_TIMED_OUT = 5;
+  ATTEMPT_STATUS_CANCELLED = 6;
+}
+
+// ==========================
+// Mensagens: Core -> Worker
+// ==========================
+
+message ProcessRequestProto {
+  string master_id = 1; // UUID do master
+  int64 task_id = 2;
+  int64 task_size = 3;
+  string language = 4;
+}
+
+enum ProcessResponseEnum {
+  PROCESS_RESPONSE_UNSPECIFIED = 0;
+  PROCESS_RESPONSE_ACCEPTED = 1;
+  PROCESS_RESPONSE_REJECTED_FULL = 2;
+  PROCESS_RESPONSE_REJECTED_INCOMPATIBLE = 3;
+}
+
+message ProcessRequestResponseProto {
+  ProcessResponseEnum response = 1;
+}
+
+message TaskDataProto {
+  int64 task_id = 1;
+  string worker_id = 2; // UUID
+  int64 attempt_id = 3;
+  string filename = 4;
+  int64 size = 5;
+  
+  // Array de bytes para o áudio
+  bytes audio_chunk = 6; 
+}
+
+message TaskResultsProto {
+  int64 task_id = 1;
+  int64 attempt_id = 2;
+  TaskAttemptStatusProto final_status = 3;
+  string result_text = 4;
+  string logs = 5;
+}
+
+// ==========================
+// Mensagens: Worker -> Core
+// ==========================
+
+message WorkerEntryRequestProto {
+  string id = 1; // UUID
+  string name = 2;
+  string ip = 3;
+  int32 port = 4;
+  WorkerRuntimeProto runtime = 5;
+  int32 simultaneous_capacity = 6;
+  repeated string languages = 7;
+}
+
+enum ConnectionStatusEnum {
+  CONNECTION_STATUS_UNSPECIFIED = 0;
+  CONNECTION_STATUS_OK = 1;
+  CONNECTION_STATUS_REJECTED = 2;
+}
+
+message WorkerEntryResponseProto {
+  ConnectionStatusEnum connection_status = 1;
+  string worker_id = 2; // UUID
+  string master_id = 3; // UUID
+}
+
+message HeartbeatProto {
+  string worker_id = 1; // UUID
+  string master_id = 2; // UUID
+  WorkerStatusProto worker_status = 3;
+}
+
+enum HeartbeatResponseEnum {
+  HEARTBEAT_RESPONSE_UNSPECIFIED = 0;
+  HEARTBEAT_RESPONSE_OK = 1;
+  HEARTBEAT_RESPONSE_TIMEOUT = 2;
+  HEARTBEAT_RESPONSE_NOT_REGISTERED = 3;
+}
+
+message HeartbeatResponseProto {
+  HeartbeatResponseEnum response = 1;
+}
+
+message WorkerShutdownProto {
+  string worker_id = 1; // UUID
+  string master_id = 2; // UUID
+}
+
+message WorkerShutdownResponseProto {
+  bool success = 1;
+}
+
+// ==========================
+// Serviços gRPC
+// ==========================
+
+// Serviço hospedado no Worker, chamado pelo Core (Master)
+service WorkerNodeService {
+  rpc RequestProcessing(ProcessRequestProto) returns (ProcessRequestResponseProto);
+  
+  rpc ExecuteTask(stream TaskDataProto) returns (TaskResultsProto);
+}
+
+// Serviço hospedado no Core (Master), chamado pelo Worker
+service MasterNodeService {
+  rpc RegisterWorker(WorkerEntryRequestProto) returns (WorkerEntryResponseProto);
+  rpc SendHeartbeat(HeartbeatProto) returns (HeartbeatResponseProto);
+  rpc ShutdownWorker(WorkerShutdownProto) returns (WorkerShutdownResponseProto);
+}
