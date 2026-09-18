@@ -1,9 +1,36 @@
 from abc import ABC, abstractmethod
-from collections.abc import Sequence
+from enum import Enum
+from typing import List
+from uuid import UUID
 
-from typing import Generic, List, Sequence, TypeVar, Optional
+from src.domain.entities import Batch, Task, Worker
 
-from src.domain.entities import Batch, Task, Worker, TaskStatus
+
+class WorkerService(ABC):
+
+    class ConnectionStatusEnum(str, Enum):
+        CONNECTION_STATUS_OK = "CONNECTION_STATUS_OK"
+        CONNECTION_STATUS_REJECTED = "CONNECTION_STATUS_REJECTE"
+
+    class HeartbeatResponseEnum(str, Enum):
+        HEARTBEAT_RESPONSE_OK = "HEARTBEAT_RESPONSE_OK"
+        HEARTBEAT_RESPONSE_TIMEOUT = "HEARTBEAT_RESPONSE_TIMEOUT"
+        HEARTBEAT_RESPONSE_NOT_REGISTERED = "HEARTBEAT_RESPONSE_NOT_REGISTERED"
+
+    @abstractmethod
+    async def register_worker(self, worker: Worker) -> ConnectionStatusEnum:
+        "Registra um worker no sistema"
+        pass
+
+    @abstractmethod
+    async def compute_hearbeat(self, worker_id: UUID) -> HeartbeatResponseEnum:
+        "Computa um hearbeat recebido do worker com id específicado"
+        pass
+
+    @abstractmethod
+    async def shutdown_worker(self, worker_id: UUID) -> bool:
+        "Registra o desligamento o worker"
+        pass
 
 
 class TaskService(ABC):

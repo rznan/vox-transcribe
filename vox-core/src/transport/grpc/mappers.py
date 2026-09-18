@@ -31,6 +31,10 @@ STATUS_ATTEMPT_DOMAIN_TO_PROTO = {
     TaskAttemptStatus.CANCELLED: task_pb2.TASK_ATTEMPT_STATUS_CANCELLED,
 }
 
+# =============================
+#       TASKS & BATCHES
+# =============================
+
 
 def submit_task_request_to_domain(request: task_pb2.SubmitTaskRequestProto) -> Task:
     artifact_data = {}

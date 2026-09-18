@@ -1,18 +1,56 @@
 import logging
+import uuid
 
 import grpc
 
 import src.transport.grpc.mappers as grpc_mappers
-from src.domain.interfaces.services import TaskService
+from src.domain.interfaces.services import TaskService, WorkerService
+from src.transport.grpc.generated import (
+    core_worker_internal_communication_pb2 as cw_pb2,
+)
+from src.transport.grpc.generated import (
+    core_worker_internal_communication_pb2_grpc as cw_pb2_grpc,
+)
 from src.transport.grpc.generated import task_service_pb2 as task_pb2
 from src.transport.grpc.generated import task_service_pb2_grpc as task_pb2_grpc
 
 logger = logging.getLogger(__name__)
 
 
+class MasterNodeServiceImpl(cw_pb2_grpc.MasterNodeServiceServicer):
+    """
+    Implementação da camada de transporte gRPC para o servidor de workers.
+    """
+
+    def __init__(self, worker_service: WorkerService, master_id: uuid.UUID) -> None:
+        self.master_id = master_id
+        self.worker_service = worker_service
+
+    async def RegisterWorker(
+        self,
+        request: cw_pb2.WorkerEntryRequestProto,
+        context: grpc.aio.ServicerContext,
+    ) -> cw_pb2.WorkerEntryResponseProto:
+        raise NotImplemented
+
+    async def SendHeartbeat(
+        self,
+        request: cw_pb2.HeartbeatProto,
+        context: grpc.aio.ServicerContext,
+    ) -> cw_pb2.HeartbeatResponseProto:
+        raise NotImplemented
+
+    async def ShutdownWorker(
+        self,
+        request: cw_pb2.WorkerShutdownProto,
+        context: grpc.aio.ServicerContext,
+    ) -> cw_pb2.WorkerShutdownResponseProto:
+        raise NotImplemented
+
+
 class TaskGrpcServiceImpl(task_pb2_grpc.TaskGrpcServiceServicer):
     """
-    Implementação da camada de transporte gRPC.
+    Implementação da camada de transporte gRPC para o servidor de tarefas.
     """
 
     def __init__(self, task_service: TaskService) -> None:
