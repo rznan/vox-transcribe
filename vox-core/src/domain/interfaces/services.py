@@ -10,7 +10,8 @@ class WorkerService(ABC):
 
     class ConnectionStatusEnum(str, Enum):
         CONNECTION_STATUS_OK = "CONNECTION_STATUS_OK"
-        CONNECTION_STATUS_REJECTED = "CONNECTION_STATUS_REJECTE"
+        CONNECTION_STATUS_REJECTED = "CONNECTION_STATUS_REJECTED"
+
 
     class HeartbeatResponseEnum(str, Enum):
         HEARTBEAT_RESPONSE_OK = "HEARTBEAT_RESPONSE_OK"
