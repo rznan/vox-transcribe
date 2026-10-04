@@ -1,16 +1,25 @@
 import json
 import logging
 from datetime import datetime
+from uuid import UUID
 from typing import List
 
 from google.protobuf.timestamp_pb2 import Timestamp
 
-from src.domain.entities import Batch, Task, TaskAttempt, TaskAttemptStatus, TaskStatus
+from src.domain.value_objects.enums import WorkerRuntime, WorkerStatus
+from src.domain.entities import Batch, Task, TaskAttempt, TaskAttemptStatus, TaskStatus, Worker
 from src.transport.grpc.generated import task_service_pb2 as task_pb2
+from src.transport.grpc.generated import core_worker_internal_communication_pb2 as cw_pb2
+from src.domain.interfaces.services import WorkerService
 
 logger = logging.getLogger(__name__)
 
-STATUS_DOMAIN_TO_PROTO = {
+# =============================
+#       DICIONÁRIOS DE ENUMS TASK
+# =============================
+
+
+TASK_STATUS_DOMAIN_TO_PROTO = {
     TaskStatus.SUBMITTED: task_pb2.TASK_STATUS_SUBMITTED,
     TaskStatus.QUEUED: task_pb2.TASK_STATUS_QUEUED,
     TaskStatus.ASSIGNED: task_pb2.TASK_STATUS_ASSIGNED,
@@ -22,13 +31,40 @@ STATUS_DOMAIN_TO_PROTO = {
     TaskStatus.REQUEUED: task_pb2.TASK_STATUS_REQUEUED,
 }
 
-STATUS_ATTEMPT_DOMAIN_TO_PROTO = {
+TASK_STATUS_ATTEMPT_DOMAIN_TO_PROTO = {
     TaskAttemptStatus.PENDING: task_pb2.TASK_ATTEMPT_STATUS_PENDING,
     TaskAttemptStatus.RUNNING: task_pb2.TASK_ATTEMPT_STATUS_RUNNING,
     TaskAttemptStatus.SUCCESS: task_pb2.TASK_ATTEMPT_STATUS_SUCCESS,
     TaskAttemptStatus.FAILED: task_pb2.TASK_ATTEMPT_STATUS_FAILED,
     TaskAttemptStatus.TIMED_OUT: task_pb2.TASK_ATTEMPT_STATUS_TIMED_OUT,
     TaskAttemptStatus.CANCELLED: task_pb2.TASK_ATTEMPT_STATUS_CANCELLED,
+}
+
+
+# =============================
+#       DICIONÁRIOS DE ENUMS WORKER
+# =============================
+
+WORKER_RUNTIME_PROTO_TO_DOMAIN = {
+    cw_pb2.WORKER_RUNTIME_CPU: WorkerRuntime.CPU,
+    cw_pb2.WORKER_RUNTIME_GPU: WorkerRuntime.GPU,
+}
+
+WORKER_STATUS_PROTO_TO_DOMAIN = {
+    cw_pb2.WORKER_STATUS_IDLE: WorkerStatus.IDLE,
+    cw_pb2.WORKER_STATUS_BUSY: WorkerStatus.BUSY,
+    cw_pb2.WORKER_STATUS_FULL: WorkerStatus.FULL,
+}
+
+WORKER_CONNECTION_STATUS_DOMAIN_TO_PROTO = {
+    WorkerService.ConnectionStatusEnum.CONNECTION_STATUS_OK: cw_pb2.CONNECTION_STATUS_OK,
+    WorkerService.ConnectionStatusEnum.CONNECTION_STATUS_REJECTED: cw_pb2.CONNECTION_STATUS_REJECTED,
+}
+
+WORKER_HEARTBEAT_RESPONSE_DOMAIN_TO_PROTO = {
+    WorkerService.HeartbeatResponseEnum.HEARTBEAT_RESPONSE_OK: cw_pb2.HEARTBEAT_RESPONSE_OK,
+    WorkerService.HeartbeatResponseEnum.HEARTBEAT_RESPONSE_TIMEOUT: cw_pb2.HEARTBEAT_RESPONSE_TIMEOUT,
+    WorkerService.HeartbeatResponseEnum.HEARTBEAT_RESPONSE_NOT_REGISTERED: cw_pb2.HEARTBEAT_RESPONSE_NOT_REGISTERED,
 }
 
 # =============================
@@ -71,7 +107,7 @@ def batch_domain_to_submit_response(batch: Batch) -> task_pb2.SubmitBatchRespons
 
 
 def task_domain_to_lite_proto(task: Task) -> task_pb2.TaskLiteProto:
-    proto_status = STATUS_DOMAIN_TO_PROTO.get(
+    proto_status = TASK_STATUS_DOMAIN_TO_PROTO.get(
         task.status, task_pb2.TASK_STATUS_UNSPECIFIED
     )
     attempts = getattr(task, "attempts", [])
@@ -91,7 +127,7 @@ def attempt_domain_to_proto(attempt: TaskAttempt) -> task_pb2.TaskAttemptProto:
     Mapeia a entidade TaskAttempt para sua versão no gRPC.
     Lida com segurança com os IDs que possam não estar persistidos.
     """
-    proto_status = STATUS_ATTEMPT_DOMAIN_TO_PROTO.get(
+    proto_status = TASK_STATUS_ATTEMPT_DOMAIN_TO_PROTO.get(
         attempt.status, task_pb2.TASK_ATTEMPT_STATUS_UNSPECIFIED
     )
 
@@ -120,7 +156,7 @@ def handle_id_and_datetime_to_proto_conversion(
 
 
 def task_domain_to_full_proto(task: Task) -> task_pb2.TaskFullProto:
-    proto_status = STATUS_DOMAIN_TO_PROTO.get(
+    proto_status = TASK_STATUS_DOMAIN_TO_PROTO.get(
         task.status, task_pb2.TASK_STATUS_UNSPECIFIED
     )
     attempts = getattr(task, "attempts", [])
@@ -175,3 +211,72 @@ def list_batches_domain_to_proto(
     return task_pb2.ListBatchesResponseProto(
         batches=[batch_domain_to_lite_proto(b) for b in batches]
     )
+
+
+# =============================
+#             WORKER
+# =============================
+
+
+def worker_entry_request_to_domain(request: cw_pb2.WorkerEntryRequestProto) -> Worker:
+    """
+    Transforma a requisição de registro gRPC em uma entidade de domínio Worker.
+    """
+    try:
+        worker_id = UUID(request.id)
+    except ValueError as e:
+        logger.error(f"UUID inválido recebido no registro do worker: {request.id}")
+        raise ValueError("ID do worker inválido") from e
+
+    runtime = WORKER_RUNTIME_PROTO_TO_DOMAIN.get(
+        request.runtime, WorkerRuntime.CPU
+    )  # Fallback seguro para CPU
+
+    return Worker(
+        id=worker_id,
+        name=request.name,
+        ip=request.ip,
+        port=request.port,
+        runtime=runtime,
+        simultaneous_capacity=request.simultaneous_capacity,
+        languages_supported=list(request.languages),
+        # Inicializamos com status IDLE e carga 0 por padrão num novo registro
+        status=WorkerStatus.IDLE,
+        current_workload=0,
+    )
+
+
+def connection_status_to_proto(
+    status: WorkerService.ConnectionStatusEnum, worker_id: UUID, master_id: UUID
+) -> cw_pb2.WorkerEntryResponseProto:
+    """
+    Transforma o status da conexão gerado pelo domínio na resposta gRPC.
+    """
+    proto_status = WORKER_CONNECTION_STATUS_DOMAIN_TO_PROTO.get(
+        status, cw_pb2.CONNECTION_STATUS_UNSPECIFIED
+    )
+
+    return cw_pb2.WorkerEntryResponseProto(
+        connection_status=proto_status,
+        worker_id=str(worker_id),
+        master_id=str(master_id),
+    )
+
+def heartbeat_response_to_proto(
+    status: WorkerService.HeartbeatResponseEnum,
+) -> cw_pb2.HeartbeatResponseProto:
+    """
+    Transforma a resposta de heartbeat do domínio na mensagem de resposta gRPC.
+    """
+    proto_status = WORKER_HEARTBEAT_RESPONSE_DOMAIN_TO_PROTO.get(
+        status, cw_pb2.HEARTBEAT_RESPONSE_UNSPECIFIED
+    )
+
+    return cw_pb2.HeartbeatResponseProto(response=proto_status)
+
+def shutdown_response_to_proto(success: bool) -> cw_pb2.WorkerShutdownResponseProto:
+    """
+    Transforma o booleano de sucesso da operação na resposta gRPC.
+    """
+    return cw_pb2.WorkerShutdownResponseProto(success=success)
+
