@@ -1,5 +1,8 @@
-import logging
+import re
 import uuid
+import functools
+import logging
+from typing import Callable, Any
 
 import grpc
 
@@ -16,6 +19,29 @@ from src.transport.grpc.generated import task_service_pb2_grpc as task_pb2_grpc
 
 logger = logging.getLogger(__name__)
 
+def handle_grpc_errors(action_description: str) -> Callable:
+    """
+    Decorador para centralizar o tratamento de exceções nos métodos gRPC,
+    mapeando exceções do Python para os status do gRPC apropriados.
+    """
+    def decorator(func: Callable) -> Callable:
+        @functools.wraps(func)
+        async def wrapper(self: Any, request: Any, context: grpc.aio.ServicerContext, *args: Any, **kwargs: Any) -> Any:
+            try:
+                return await func(self, request, context, *args, **kwargs)
+            except PermissionError as e:
+                await context.abort(grpc.StatusCode.PERMISSION_DENIED, str(e))
+            except ValueError as e:
+                await context.abort(grpc.StatusCode.INVALID_ARGUMENT, str(e))
+            except Exception as e:
+                logger.error(f"Erro interno ao {action_description}: {e}", exc_info=True)
+                await context.abort(
+                    grpc.StatusCode.INTERNAL,
+                    f"Erro interno ao {action_description}.",
+                )
+        return wrapper
+    return decorator
+
 
 class MasterNodeServiceImpl(cw_pb2_grpc.MasterNodeServiceServicer):
     """
@@ -26,27 +52,51 @@ class MasterNodeServiceImpl(cw_pb2_grpc.MasterNodeServiceServicer):
         self.master_id = master_id
         self.worker_service = worker_service
 
+    def _verify_master_id(self, request_master_id: str) -> None:
+        """Valida se o master_id da requisição corresponde ao ID deste Master Node."""
+        if request_master_id != str(self.master_id):
+            raise PermissionError("master_id does not match")
+
+    def _parse_uuid(self, uuid_str: str, param_name: str = "worker_id") -> uuid.UUID:
+        """Converte uma string para UUID ou lança ValueError padronizado."""
+        try:
+            return uuid.UUID(uuid_str)
+        except (ValueError, TypeError, AttributeError):
+            raise ValueError(f"{param_name} is not a valid UUID")
+
+    @handle_grpc_errors("processar solicitação de entrada do worker")
     async def RegisterWorker(
         self,
         request: cw_pb2.WorkerEntryRequestProto,
         context: grpc.aio.ServicerContext,
     ) -> cw_pb2.WorkerEntryResponseProto:
-        raise NotImplemented
+        worker = grpc_mappers.worker_entry_request_to_domain(request)
+        result = await self.worker_service.register_worker(worker)
+        return grpc_mappers.connection_status_to_proto(result, worker.id, self.master_id)
 
+    @handle_grpc_errors("processar o sinal de vida do worker")
     async def SendHeartbeat(
         self,
         request: cw_pb2.HeartbeatProto,
         context: grpc.aio.ServicerContext,
     ) -> cw_pb2.HeartbeatResponseProto:
-        raise NotImplemented
+        self._verify_master_id(request.master_id)
+        worker_id = self._parse_uuid(request.worker_id)
 
+        result = await self.worker_service.compute_heartbeat(worker_id)
+        return grpc_mappers.heartbeat_response_to_proto(result)
+
+    @handle_grpc_errors("desligar o worker")
     async def ShutdownWorker(
         self,
         request: cw_pb2.WorkerShutdownProto,
         context: grpc.aio.ServicerContext,
     ) -> cw_pb2.WorkerShutdownResponseProto:
-        raise NotImplemented
+        self._verify_master_id(request.master_id)
+        worker_id = self._parse_uuid(request.worker_id)
 
+        result = await self.worker_service.shutdown_worker(worker_id)
+        return grpc_mappers.shutdown_response_to_proto(result)
 
 class TaskGrpcServiceImpl(task_pb2_grpc.TaskGrpcServiceServicer):
     """
