@@ -24,7 +24,7 @@ class WorkerService(ABC):
         pass
 
     @abstractmethod
-    async def compute_hearbeat(self, worker_id: UUID) -> HeartbeatResponseEnum:
+    async def compute_heartbeat(self, worker_id: UUID) -> HeartbeatResponseEnum:
         "Computa um hearbeat recebido do worker com id específicado"
         pass
 
