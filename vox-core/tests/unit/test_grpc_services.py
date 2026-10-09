@@ -165,7 +165,7 @@ class TestTaskGrpcServiceImpl:
             await servicer.SubmitBatch(request, mock_context)
 
         mock_context.abort.assert_awaited_once_with(
-            grpc.StatusCode.INTERNAL, "Erro interno ao processar a submissão do lote."
+            grpc.StatusCode.INTERNAL, "Erro interno ao submeter o batch."
         )
 
     # ==========================================
@@ -300,5 +300,5 @@ class TestTaskGrpcServiceImpl:
             await servicer.DeleteBatch(request, mock_context)
 
         mock_context.abort.assert_awaited_once_with(
-            grpc.StatusCode.NOT_FOUND, "Batch 999 não encontrado para exclusão."
+            grpc.StatusCode.NOT_FOUND, "Batch 999 não encontrado."
         )

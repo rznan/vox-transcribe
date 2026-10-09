@@ -8,6 +8,8 @@ import grpc
 
 import src.transport.grpc.mappers as grpc_mappers
 from src.domain.interfaces.services import TaskService, WorkerService
+from src.domain.entities import Batch, Task
+
 from src.transport.grpc.generated import (
     core_worker_internal_communication_pb2 as cw_pb2,
 )
@@ -33,6 +35,8 @@ def handle_grpc_errors(action_description: str) -> Callable:
                 await context.abort(grpc.StatusCode.PERMISSION_DENIED, str(e))
             except ValueError as e:
                 await context.abort(grpc.StatusCode.INVALID_ARGUMENT, str(e))
+            except LookupError as e:
+                await context.abort(grpc.StatusCode.NOT_FOUND, str(e))
             except Exception as e:
                 logger.error(f"Erro interno ao {action_description}: {e}", exc_info=True)
                 await context.abort(
@@ -106,52 +110,50 @@ class TaskGrpcServiceImpl(task_pb2_grpc.TaskGrpcServiceServicer):
     def __init__(self, task_service: TaskService) -> None:
         self.task_service = task_service
 
+    def _verify_batch_not_None(self, batch: Batch | None, requested_batch_id) -> Batch:
+        if not batch:
+            raise LookupError(f"Batch {requested_batch_id} não encontrado.")
+        return batch
+
+    def _verify_task_not_None(self, task: Task | None, requested_task_id) -> Task:
+        if not task:
+            raise LookupError(f"Task {requested_task_id} não encontrada.")
+        return task
+
+    @handle_grpc_errors("submeter o batch")
     async def SubmitBatch(
         self,
         request: task_pb2.SubmitBatchRequestProto,
         context: grpc.aio.ServicerContext,
     ) -> task_pb2.SubmitBatchResponseProto:
-        try:
-            requested_batch = grpc_mappers.submit_batch_request_to_domain(request)
-            resulting_batch = await self.task_service.create_batch(requested_batch)
-            return grpc_mappers.batch_domain_to_submit_response(resulting_batch)
+        requested_batch = grpc_mappers.submit_batch_request_to_domain(request)
+        resulting_batch = await self.task_service.create_batch(requested_batch)
+        return grpc_mappers.batch_domain_to_submit_response(resulting_batch)
 
-        except ValueError as e:
-            logger.warning(f"Erro de validação ao submeter batch: {e}")
-            await context.abort(grpc.StatusCode.INVALID_ARGUMENT, str(e))
-        except Exception as e:
-            logger.error(f"Erro interno ao submeter batch: {e}", exc_info=True)
-            await context.abort(
-                grpc.StatusCode.INTERNAL,
-                "Erro interno ao processar a submissão do lote.",
-            )
 
+    @handle_grpc_errors("buscar o batch")
     async def GetBatch(
         self, request: task_pb2.GetBatchRequestProto, context: grpc.aio.ServicerContext
     ) -> task_pb2.GetBatchResponseProto:
         batch = await self.task_service.get_batch(request.batch_id)
-        if not batch:
-            await context.abort(
-                grpc.StatusCode.NOT_FOUND, f"Batch {request.batch_id} não encontrado."
-            )
+        batch = self._verify_batch_not_None(batch, request.batch_id)
 
         return task_pb2.GetBatchResponseProto(
             batch=grpc_mappers.batch_domain_to_full_proto(batch)
         )
 
+    @handle_grpc_errors("buscar a task")
     async def GetTask(
         self, request: task_pb2.GetTaskRequestProto, context: grpc.aio.ServicerContext
     ) -> task_pb2.GetTaskResponseProto:
         task = await self.task_service.get_task(request.task_id)
-        if not task:
-            await context.abort(
-                grpc.StatusCode.NOT_FOUND, f"Task {request.task_id} não encontrada."
-            )
+        task = self._verify_task_not_None(task, request.task_id)
 
         return task_pb2.GetTaskResponseProto(
             task=grpc_mappers.task_domain_to_full_proto(task)
         )
 
+    @handle_grpc_errors("listar os batches")
     async def ListBatches(
         self,
         request: task_pb2.ListBatchesRequestProto,
@@ -162,33 +164,28 @@ class TaskGrpcServiceImpl(task_pb2_grpc.TaskGrpcServiceServicer):
         )
         return grpc_mappers.list_batches_domain_to_proto(batches)
 
+    @handle_grpc_errors("cancelar o batch")
     async def CancelBatch(
         self,
         request: task_pb2.CancelBatchRequestProto,
         context: grpc.aio.ServicerContext,
     ) -> task_pb2.CancelBatchResponseProto:
         batch = await self.task_service.get_batch(request.batch_id)
-        if not batch:
-            await context.abort(
-                grpc.StatusCode.NOT_FOUND, f"Batch {request.batch_id} não encontrado."
-            )
+        batch = self._verify_batch_not_None(batch, request.batch_id)
 
         cancelled_batch = await self.task_service.cancel_batch(request.batch_id)
         return task_pb2.CancelBatchResponseProto(
             batch=grpc_mappers.batch_domain_to_lite_proto(cancelled_batch)
         )
 
+    @handle_grpc_errors("deletar o batch")
     async def DeleteBatch(
         self,
         request: task_pb2.DeleteBatchRequestProto,
         context: grpc.aio.ServicerContext,
     ) -> task_pb2.DeleteBatchResponseProto:
         batch = await self.task_service.get_batch(request.batch_id)
-        if not batch:
-            await context.abort(
-                grpc.StatusCode.NOT_FOUND,
-                f"Batch {request.batch_id} não encontrado para exclusão.",
-            )
+        batch = self._verify_batch_not_None(batch, request.batch_id)
 
         await self.task_service.delete_batch(request.batch_id)
         return task_pb2.DeleteBatchResponseProto(success=True)
