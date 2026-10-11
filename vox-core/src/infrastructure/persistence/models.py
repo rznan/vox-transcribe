@@ -98,7 +98,6 @@ class TaskAttemptModel(Base):
     id: Mapped[int] = mapped_column(
         Integer,
         primary_key=True,
-        autoincrement=True,
     )
 
     task_id: Mapped[int] = mapped_column(

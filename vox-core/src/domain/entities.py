@@ -87,7 +87,7 @@ class Task:
         if self.id != None:
 
             attempt = TaskAttempt(
-                _id=None,
+                _id=len(self.attempts),
                 task_id=self.id,
                 worker_id=worker_id,
                 status=TaskAttemptStatus.PENDING,
