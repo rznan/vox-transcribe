@@ -2,8 +2,10 @@ from abc import ABC, abstractmethod
 from collections.abc import Sequence
 
 from typing import Generic, Sequence, TypeVar, Optional
+from uuid import UUID
 
-from src.domain.entities import Batch, Task, Worker, TaskStatus
+from src.domain.entities import Batch, Task, Worker
+from src.domain.value_objects.enums import TaskStatus
 
 # entidade de domínio
 T = TypeVar("T")
@@ -34,7 +36,7 @@ class BaseRepository(ABC, Generic[T, ID]):
         pass
 
     @abstractmethod
-    async def list_all(self, limit: int = 100, offset: int = 0) -> Sequence[T]:
+    async def list_all(self, limit: int = 100, offset: int = 0) -> list[T]:
         """Lista as entidades com filtro básico"""
         pass
 
@@ -50,17 +52,17 @@ class TaskRepository(BaseRepository[Task, int]):
         pass
 
     @abstractmethod
-    async def get_pending_tasks(self, limit: int = 50, offset=0) -> Sequence[Task]:
+    async def get_pending_tasks(self, limit: int = 50, offset=0) -> list[Task]:
         """Recupera tarefas prontas para serem escalonadas/executadas."""
         pass
 
     @abstractmethod
-    async def get_by_batch_id(self, batch_id: int) -> Sequence[Task]:
+    async def get_by_batch_id(self, batch_id: int) -> list[Task]:
         """Recupera todas as tarefas associadas a um Lote (Batch)."""
         pass
 
 
-class WorkerRepository(BaseRepository[Worker, str]):
+class WorkerRepository(BaseRepository[Worker, UUID]):
     """Contrato de persistência especializado para Workers."""
 
     pass

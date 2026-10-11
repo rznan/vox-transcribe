@@ -17,6 +17,7 @@ from src.infrastructure.persistence.models import (
 import src.infrastructure.persistence.mappers as mappers
 
 from typing import Callable, Generic, Type, TypeVar, cast
+from uuid import UUID
 
 from sqlalchemy import inspect, select
 from sqlalchemy.orm import InstanceState
@@ -155,12 +156,15 @@ class BatchRepository(BaseRepository[Batch, BatchModel, int], rc.BatchRepository
             .options(selectinload(BatchModel.tasks))
             .where(BatchModel.id == batch_id)
         )
-        model = (await self.session.execute(stmt)).scalar_one()
+        model = (await self.session.execute(stmt)).scalar_one_or_none()
+
+        if model is None:
+            return None
 
         return mappers.model_to_batch_with_tasks(model)
 
 
-class WorkerRepository(BaseRepository[Worker, WorkerModel, str], rc.WorkerRepository):
+class WorkerRepository(BaseRepository[Worker, WorkerModel, UUID], rc.WorkerRepository):
     def __init__(self, session: AsyncSession):
         super().__init__(
             session, WorkerModel, mappers.worker_to_model, mappers.model_to_worker
