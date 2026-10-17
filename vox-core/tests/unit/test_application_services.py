@@ -197,6 +197,9 @@ async def test_restore_pending_batches_enqueues_only_unfinished_tasks():
 async def test_register_worker_persists_then_registers_with_load_balancer():
     factory = FakeRepositoryFactory()
     balancer = Mock()
+    balancer.verify_worker = AsyncMock(return_value=False)
+    balancer.get_registered_worker = AsyncMock(return_value=None)
+    balancer.register = AsyncMock()
     worker = make_worker()
     factory.workers.add.return_value = worker
     service = WorkerServiceImpl(factory, balancer)
@@ -205,8 +208,7 @@ async def test_register_worker_persists_then_registers_with_load_balancer():
 
     assert result is WorkerService.ConnectionStatusEnum.CONNECTION_STATUS_OK
     factory.workers.add.assert_awaited_once_with(worker)
-    balancer.register.assert_called_once_with(worker)
-    assert worker.id in service._workers
+    balancer.register.assert_awaited_once_with(worker)
     assert worker.heartbeat is not None
 
 
@@ -215,6 +217,10 @@ async def test_reregistered_worker_updates_repository_and_replaces_balancer_entr
     factory = FakeRepositoryFactory()
     balancer = Mock()
     worker = make_worker()
+    balancer.verify_worker = AsyncMock(return_value=True)
+    balancer.get_registered_worker = AsyncMock(return_value=worker)
+    balancer.unregister = AsyncMock(return_value=worker)
+    balancer.register = AsyncMock()
     factory.workers.get_by_id.return_value = worker
     factory.workers.update.return_value = worker
     service = WorkerServiceImpl(factory, balancer)
@@ -222,22 +228,24 @@ async def test_reregistered_worker_updates_repository_and_replaces_balancer_entr
     await service.register_worker(worker)
 
     factory.workers.update.assert_awaited_once_with(worker)
-    balancer.unregister.assert_called_once_with(worker.id)
-    balancer.register.assert_called_once_with(worker)
+    balancer.unregister.assert_awaited_once_with(worker.id)
+    balancer.register.assert_awaited_once_with(worker)
 
 
 @pytest.mark.asyncio
 async def test_heartbeat_updates_registered_worker_and_rejects_unknown_worker():
     factory = FakeRepositoryFactory()
     worker = make_worker()
-    service = WorkerServiceImpl(factory, Mock())
+    balancer = Mock()
+    balancer.get_registered_worker = AsyncMock(return_value=None)
+    service = WorkerServiceImpl(factory, balancer)
 
     assert (
         await service.compute_heartbeat(worker.id)
         is WorkerService.HeartbeatResponseEnum.HEARTBEAT_RESPONSE_NOT_REGISTERED
     )
 
-    service._workers[worker.id] = worker
+    balancer.get_registered_worker.return_value = worker
     assert (
         await service.compute_heartbeat(worker.id)
         is WorkerService.HeartbeatResponseEnum.HEARTBEAT_RESPONSE_OK
@@ -250,22 +258,43 @@ async def test_shutdown_worker_updates_repository_and_unregisters_worker():
     factory = FakeRepositoryFactory()
     balancer = Mock()
     worker = make_worker()
+    balancer.get_registered_worker = AsyncMock(return_value=worker)
+    balancer.verify_worker = AsyncMock(return_value=True)
+    balancer.unregister = AsyncMock(return_value=worker)
     service = WorkerServiceImpl(factory, balancer)
-    service._workers[worker.id] = worker
 
     assert await service.shutdown_worker(worker.id) is True
 
     assert worker.status is WorkerStatus.OFFLINE
     assert worker.heartbeat is None
     factory.workers.update.assert_awaited_once_with(worker)
-    balancer.unregister.assert_called_once_with(worker.id)
-    assert worker.id not in service._workers
+    balancer.unregister.assert_awaited_once_with(worker.id)
 
 
 @pytest.mark.asyncio
 async def test_shutdown_unknown_worker_returns_false():
     factory = FakeRepositoryFactory()
-    service = WorkerServiceImpl(factory, Mock())
+    balancer = Mock()
+    balancer.get_registered_worker = AsyncMock(return_value=None)
+    service = WorkerServiceImpl(factory, balancer)
 
     assert await service.shutdown_worker(uuid4()) is False
     factory.workers.update.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_restore_known_workers_starts_fresh_utc_heartbeat():
+    factory = FakeRepositoryFactory()
+    balancer = Mock()
+    balancer.register = AsyncMock()
+    worker = make_worker()
+    worker.heartbeat = None
+    factory.workers.list_all.return_value = [worker]
+    service = WorkerServiceImpl(factory, balancer)
+
+    await service.restore_known_workers()
+
+    balancer.register.assert_awaited_once_with(worker)
+    assert worker.heartbeat is not None
+    assert worker.heartbeat.tzinfo is not None
+    assert worker.current_workload == 0

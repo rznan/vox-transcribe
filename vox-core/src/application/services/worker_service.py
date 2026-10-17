@@ -23,7 +23,6 @@ class WorkerServiceImpl(WorkerService):
     ) -> None:
         self.repository_factory = repository_factory
         self.load_balancer = load_balancer
-        self._workers: dict[UUID, Worker] = {}
 
     async def restore_known_workers(self) -> None:
         """Restore persisted workers with a fresh runtime state."""
@@ -39,8 +38,7 @@ class WorkerServiceImpl(WorkerService):
 
             for worker in workers:
                 self._reset_runtime_state(worker)
-                self._workers[worker.id] = worker
-                self.load_balancer.register(worker)
+                await self.load_balancer.register(worker)
 
             if len(workers) < page_size:
                 break
@@ -53,6 +51,7 @@ class WorkerServiceImpl(WorkerService):
     ) -> WorkerService.ConnectionStatusEnum:
         """Register a new worker or refresh an existing registration."""
         existing_worker = await self._find_worker(worker.id)
+        was_registered = await self.load_balancer.verify_worker(worker.id)
 
         self._prepare_worker_for_connection(worker)
 
@@ -62,11 +61,11 @@ class WorkerServiceImpl(WorkerService):
             else:
                 persisted_worker = await repositories.workers.update(worker)
 
-        if existing_worker is not None:
-            self._unregister_from_load_balancer(worker.id)
+        self._prepare_worker_for_connection(persisted_worker)
 
-        self._workers[persisted_worker.id] = persisted_worker
-        self.load_balancer.register(persisted_worker)
+        if was_registered:
+            await self._unregister_from_load_balancer(worker.id)
+        await self.load_balancer.register(persisted_worker)
 
         return self.ConnectionStatusEnum.CONNECTION_STATUS_OK
 
@@ -75,7 +74,7 @@ class WorkerServiceImpl(WorkerService):
         worker_id: UUID,
     ) -> WorkerService.HeartbeatResponseEnum:
         """Update the heartbeat of a registered worker."""
-        worker = self._workers.get(worker_id)
+        worker = await self.load_balancer.get_registered_worker(worker_id)
 
         if worker is None:
             return self.HeartbeatResponseEnum.HEARTBEAT_RESPONSE_NOT_REGISTERED
@@ -97,14 +96,14 @@ class WorkerServiceImpl(WorkerService):
         async with self.repository_factory() as repositories:
             await repositories.workers.update(worker)
 
-        self._workers.pop(worker_id, None)
-        self._unregister_from_load_balancer(worker_id)
+        if await self.load_balancer.verify_worker(worker_id):
+            await self._unregister_from_load_balancer(worker_id)
 
         return True
 
     async def _find_worker(self, worker_id: UUID) -> Worker | None:
         """Find a worker in memory or retrieve it from persistence."""
-        worker = self._workers.get(worker_id)
+        worker = await self.load_balancer.get_registered_worker(worker_id)
 
         if worker is not None:
             return worker
@@ -116,7 +115,7 @@ class WorkerServiceImpl(WorkerService):
     def _reset_runtime_state(worker: Worker) -> None:
         """Initialize transient worker state after application startup."""
         worker.status = WorkerStatus.IDLE
-        worker.heartbeat = None
+        worker.heartbeat = datetime.now(timezone.utc)
         worker.current_workload = 0
 
     @staticmethod
@@ -125,12 +124,12 @@ class WorkerServiceImpl(WorkerService):
         worker.status = WorkerStatus.IDLE
         worker.heartbeat = datetime.now(timezone.utc)
 
-    def _unregister_from_load_balancer(
+    async def _unregister_from_load_balancer(
         self,
         worker_id: UUID,
     ) -> None:
         """Remove a worker from the load balancer when registered."""
         try:
-            self.load_balancer.unregister(worker_id)
+            await self.load_balancer.unregister(worker_id)
         except WorkerIdNotRegisteredError:
             pass

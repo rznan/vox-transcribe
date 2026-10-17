@@ -1,4 +1,5 @@
 import asyncio
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 import pytest
@@ -13,7 +14,6 @@ from src.domain.value_objects.enums import WorkerRuntime, WorkerStatus
 
 @pytest.fixture
 def sample_worker() -> Worker:
-    """Fixture que retorna um worker padrão para os testes."""
     return Worker(
         id=uuid4(),
         name="Worker Alpha",
@@ -28,7 +28,6 @@ def sample_worker() -> Worker:
 
 @pytest.fixture
 def sample_worker_list(sample_worker: Worker) -> list[Worker]:
-    """Fixture que retorna uma lista com múltiplos workers."""
     return [
         sample_worker,
         Worker(
@@ -38,7 +37,6 @@ def sample_worker_list(sample_worker: Worker) -> list[Worker]:
             port=8081,
             runtime=WorkerRuntime.CPU,
             simultaneous_capacity=2,
-            status=WorkerStatus.IDLE,
             languages_supported=["en"],
         ),
     ]
@@ -46,188 +44,255 @@ def sample_worker_list(sample_worker: Worker) -> list[Worker]:
 
 @pytest.fixture
 def balancer() -> RoundRobinLoadBalancer:
-    """Fixture que inicializa o balanceador limpo para cada teste."""
     return RoundRobinLoadBalancer()
 
 
-def test_register_new_worker(balancer: RoundRobinLoadBalancer, sample_worker: Worker):
-    """Testa se inserir um worker novo o adiciona nas estruturas corretas."""
-    balancer.register(sample_worker)
+@pytest.mark.asyncio
+async def test_register_worker_and_duplicate_are_idempotent(
+    balancer: RoundRobinLoadBalancer,
+    sample_worker: Worker,
+) -> None:
+    await balancer.register(sample_worker)
+    await balancer.register(sample_worker)
 
-    assert sample_worker.id in balancer.workers
-    assert sample_worker.id in balancer.language_deques["en"]
-    assert sample_worker.id in balancer.language_deques["pt"]
-
-
-def test_register_existing_worker_does_not_duplicate(
-    balancer: RoundRobinLoadBalancer, sample_worker: Worker
-):
-    """Testa se inserir um worker que já está presente não duplica no deque."""
-    balancer.register(sample_worker)
-    balancer.register(sample_worker)  # Chamada duplicada proposital
-
-    assert len(balancer.workers) == 1
+    assert balancer.workers[sample_worker.id] is sample_worker
     assert list(balancer.language_deques["en"]).count(sample_worker.id) == 1
+    assert await balancer.verify_worker(sample_worker.id)
+    assert await balancer.get_registered_worker(sample_worker.id) is sample_worker
 
 
-def test_register_worker_in_removal_set(
-    balancer: RoundRobinLoadBalancer, sample_worker_list: list[Worker]
-):
-    """Testa se inserir um worker que está no set de remoção o retira do set."""
-    w1, w2 = sample_worker_list
-    balancer.register(w1)
-    balancer.register(w2)
+@pytest.mark.asyncio
+async def test_unregister_worker_at_head_removes_it_immediately(
+    balancer: RoundRobinLoadBalancer,
+    sample_worker: Worker,
+) -> None:
+    await balancer.register(sample_worker)
 
-    # Ao remover w2 (que não é o índice 0 da fila), ele vai para o set de remoção
-    balancer.unregister(w2.id)
-    assert w2.id in balancer.to_be_removed_worker_id_sets["en"]
-
-    # Ao registrar novamente, ele deve sair do set de remoção
-    balancer.register(w2)
-    assert w2.id not in balancer.to_be_removed_worker_id_sets["en"]
+    assert await balancer.unregister(sample_worker.id) is sample_worker
+    assert not await balancer.verify_worker(sample_worker.id)
+    assert not balancer.language_deques["en"]
 
 
-def test_unregister_worker_at_top(
-    balancer: RoundRobinLoadBalancer, sample_worker: Worker
-):
-    """Testa se remover um worker no topo do deque o remove imediatamente."""
-    balancer.register(sample_worker)
-    balancer.unregister(sample_worker.id)
+@pytest.mark.asyncio
+async def test_unregister_worker_not_at_head_uses_lazy_removal(
+    balancer: RoundRobinLoadBalancer,
+    sample_worker_list: list[Worker],
+) -> None:
+    first, second = sample_worker_list
+    await balancer.register(first)
+    await balancer.register(second)
 
-    assert sample_worker.id not in balancer.workers
-    assert len(balancer.language_deques["en"]) == 0
+    await balancer.unregister(second.id)
+
+    assert second.id not in balancer.workers
+    assert second.id in balancer.to_be_removed_worker_id_sets["en"]
+    assert await balancer.get_worker("en") is first
+    assert await balancer.get_worker("en") is first
+    assert second.id not in balancer.language_deques["en"]
+    assert second.id not in balancer.to_be_removed_worker_id_sets["en"]
 
 
-def test_unregister_worker_returns_the_worker(
-    balancer: RoundRobinLoadBalancer, sample_worker: Worker
-):
-    """Testa se remover um worker o retorna"""
-    balancer.register(sample_worker)
-    result = balancer.unregister(sample_worker.id)
-    assert result == sample_worker
-
-
-def test_unregister_unregistered_worker_raises_error(balancer: RoundRobinLoadBalancer):
-    """Testa se remover um worker que não está presente sobe exceção WorkerIdNotRegisteredError."""
+@pytest.mark.asyncio
+async def test_unregister_missing_worker_raises(
+    balancer: RoundRobinLoadBalancer,
+) -> None:
     with pytest.raises(WorkerIdNotRegisteredError):
-        balancer.unregister(uuid4())
+        await balancer.unregister(uuid4())
 
 
 @pytest.mark.asyncio
-async def test_unregister_worker_not_at_top_removes_later(
-    balancer: RoundRobinLoadBalancer, sample_worker_list: list[Worker]
-):
-    """Testa se remover worker não no topo do deque o marca para remoção futura."""
-    w1, w2 = sample_worker_list
-    balancer.register(w1)
-    balancer.register(w2)
+async def test_reregister_before_lazy_cleanup_does_not_duplicate_queue_entry(
+    balancer: RoundRobinLoadBalancer,
+    sample_worker_list: list[Worker],
+) -> None:
+    first, second = sample_worker_list
+    await balancer.register(first)
+    await balancer.register(second)
+    await balancer.unregister(second.id)
 
-    # w2 está na posição 1
-    balancer.unregister(w2.id)
+    await balancer.register(second)
 
-    # Ele ainda deve estar na fila, mas marcado para remover e fora do dict principal
-    assert w2.id not in balancer.workers
-    assert w2.id in balancer.language_deques["en"]
-    assert w2.id in balancer.to_be_removed_worker_id_sets["en"]
-
-    # Simulamos o balanceador rodando.
-    await balancer.get_worker("en")
-    await balancer.get_worker("en")
-
-    assert w2.id not in balancer.language_deques["en"]
-    assert w2.id not in balancer.to_be_removed_worker_id_sets["en"]
+    assert list(balancer.language_deques["en"]).count(second.id) == 1
+    assert second.id not in balancer.to_be_removed_worker_id_sets["en"]
 
 
 @pytest.mark.asyncio
-async def test_get_worker_idle(
+async def test_register_refresh_removes_worker_from_languages_no_longer_supported(
     balancer: RoundRobinLoadBalancer,
     sample_worker: Worker,
-):
-    """Testa pegar worker vazio/disponível."""
-    balancer.register(sample_worker)
-    sample_worker.current_workload = 0
+) -> None:
+    await balancer.register(sample_worker)
+    refreshed_worker = Worker(
+        id=sample_worker.id,
+        name=sample_worker.name,
+        ip=sample_worker.ip,
+        port=sample_worker.port,
+        runtime=sample_worker.runtime,
+        languages_supported=["de"],
+    )
 
-    worker = await balancer.get_worker("en")
-    assert worker == sample_worker
-
-
-@pytest.mark.asyncio
-async def test_get_worker_skips_removed_until_blocks(
-    balancer: RoundRobinLoadBalancer, sample_worker_list: list[Worker]
-):
-    """Testa pegar um worker marcado para remover busca o próximo até esgotar a fila e bloquear."""
-    w1, w2 = sample_worker_list
-    balancer.register(w1)
-    balancer.register(w2)
-
-    balancer.unregister(w2.id)
-    balancer.unregister(w1.id)
-
-    # A fila vai se esvaziar pois todos os workers na fila estão no set de remoção.
-    with pytest.raises(asyncio.TimeoutError):
-        await asyncio.wait_for(balancer.get_worker("en"), timeout=0.1)
-
-    assert len(balancer.language_deques["en"]) == 0
-
-
-@pytest.mark.asyncio
-async def test_get_worker_full_removes_from_deque_and_blocks(
-    balancer: RoundRobinLoadBalancer,
-    sample_worker: Worker,
-):
-    """Testa se pegar um worker cheio o remove do deque e, se a fila esvaziar, entra em espera."""
-    balancer.register(sample_worker)
-    sample_worker.current_workload = sample_worker.simultaneous_capacity
-
-    with pytest.raises(asyncio.TimeoutError):
-        await asyncio.wait_for(balancer.get_worker("en"), timeout=0.1)
+    await balancer.register(refreshed_worker)
 
     assert sample_worker.id not in balancer.language_deques["en"]
-    assert sample_worker.id in balancer.full_worker_id_set
+    assert sample_worker.id not in balancer.language_deques["pt"]
+    assert list(balancer.language_deques["de"]).count(sample_worker.id) == 1
 
 
 @pytest.mark.asyncio
-async def test_mark_worker_as_available_inserts_in_deque(
+async def test_get_worker_round_robins_available_workers(
+    balancer: RoundRobinLoadBalancer,
+    sample_worker_list: list[Worker],
+) -> None:
+    first, second = sample_worker_list
+    await balancer.register(first)
+    await balancer.register(second)
+
+    assert await balancer.get_worker("en") is first
+    assert await balancer.get_worker("en") is second
+
+
+@pytest.mark.asyncio
+async def test_get_worker_skips_full_worker_and_waits_until_available(
     balancer: RoundRobinLoadBalancer,
     sample_worker: Worker,
-):
-    """Testa marcar worker disponível insere-o na fila se ele estiver realmente disponível."""
-    balancer.register(sample_worker)
-
-    # Simulando o worker estando no estado 'cheio'
+) -> None:
+    await balancer.register(sample_worker)
     sample_worker.current_workload = sample_worker.simultaneous_capacity
 
-    with pytest.raises(asyncio.TimeoutError):
-        await asyncio.wait_for(balancer.get_worker("en"), timeout=0.1)
+    pending = asyncio.create_task(balancer.get_worker("en"))
+    await asyncio.sleep(0)
+    assert sample_worker.id in balancer.full_worker_id_set
+    assert not pending.done()
 
-    # Faz o worker se tornar disponível
     sample_worker.current_workload -= 1
-    balancer.mark_worker_as_available(sample_worker.id)
-
-    assert sample_worker.id in balancer.language_deques["en"]
-    assert sample_worker.id not in balancer.full_worker_id_set
+    await balancer.mark_worker_as_available(sample_worker.id)
+    assert await asyncio.wait_for(pending, timeout=0.2) is sample_worker
 
 
-def test_mark_worker_as_available_ignores_if_full(
+@pytest.mark.asyncio
+async def test_get_worker_waiter_wakes_after_registration(
     balancer: RoundRobinLoadBalancer,
     sample_worker: Worker,
-):
-    """Testa marcar worker disponível não insere-o na fila se ele não estiver disponível."""
-    balancer.register(sample_worker)
+) -> None:
+    pending = asyncio.create_task(balancer.get_worker("en"))
+    await asyncio.sleep(0)
 
-    balancer.language_deques["en"].remove(sample_worker.id)
-    balancer.full_worker_id_set.add(sample_worker.id)
+    await balancer.register(sample_worker)
 
-    sample_worker.current_workload = sample_worker.simultaneous_capacity
-    balancer.mark_worker_as_available(sample_worker.id)
-
-    assert sample_worker.id not in balancer.language_deques["en"]
-    assert sample_worker.id in balancer.full_worker_id_set
+    assert await asyncio.wait_for(pending, timeout=0.2) is sample_worker
 
 
-def test_mark_worker_as_available_raises_error_if_unregistered(
+@pytest.mark.asyncio
+async def test_mark_available_rejects_unknown_worker(
     balancer: RoundRobinLoadBalancer,
-):
-    """Testa marcar um worker disponível sobe exceção caso não estiver no balanceador."""
+) -> None:
     with pytest.raises(WorkerIdNotRegisteredError):
-        balancer.mark_worker_as_available(uuid4())
+        await balancer.mark_worker_as_available(uuid4())
+
+
+@pytest.mark.asyncio
+async def test_verify_worker_includes_workers_at_capacity(
+    balancer: RoundRobinLoadBalancer,
+    sample_worker: Worker,
+) -> None:
+    await balancer.register(sample_worker)
+    sample_worker.current_workload = sample_worker.simultaneous_capacity
+
+    with pytest.raises(asyncio.TimeoutError):
+        await asyncio.wait_for(balancer.get_worker("en"), timeout=0.01)
+    assert sample_worker.id in balancer.full_worker_id_set
+    assert await balancer.verify_worker(sample_worker.id)
+
+
+@pytest.mark.asyncio
+async def test_concurrent_coroutine_operations_preserve_registry_and_queues() -> None:
+    balancer = RoundRobinLoadBalancer()
+    workers = [
+        Worker(
+            id=uuid4(),
+            name=f"worker-{index}",
+            ip="127.0.0.1",
+            port=8000 + index,
+            runtime=WorkerRuntime.CPU,
+            languages_supported=["en"],
+        )
+        for index in range(40)
+    ]
+
+    await asyncio.gather(*(balancer.register(worker) for worker in workers))
+    await asyncio.gather(*(balancer.unregister(worker.id) for worker in workers[::2]))
+
+    remaining_ids = {worker.id for worker in workers[1::2]}
+    removed_ids = {worker.id for worker in workers[::2]}
+    assert set(balancer.workers) == remaining_ids
+    assert set(balancer.language_deques["en"]) - removed_ids == remaining_ids
+    assert balancer.to_be_removed_worker_id_sets["en"] == (
+        set(balancer.language_deques["en"]) & removed_ids
+    )
+
+
+@pytest.mark.asyncio
+async def test_monitor_expires_worker_using_utc_heartbeat() -> None:
+    balancer = RoundRobinLoadBalancer(
+        heartbeat_interval=0.005,
+        heartbeat_timeout=0.01,
+    )
+    worker = Worker(
+        id=uuid4(),
+        name="stale worker",
+        ip="127.0.0.1",
+        port=8080,
+        runtime=WorkerRuntime.CPU,
+        heartbeat=datetime.now(timezone.utc) - timedelta(seconds=1),
+        languages_supported=["en"],
+    )
+    await balancer.register(worker)
+
+    await balancer.start()
+    try:
+
+        async def wait_until_removed() -> None:
+            while await balancer.verify_worker(worker.id):
+                await asyncio.sleep(0.001)
+
+        await asyncio.wait_for(wait_until_removed(), timeout=0.2)
+    finally:
+        await balancer.stop()
+
+    assert not await balancer.verify_worker(worker.id)
+
+
+@pytest.mark.asyncio
+async def test_start_and_stop_are_idempotent_and_restartable(
+    balancer: RoundRobinLoadBalancer,
+) -> None:
+    await balancer.start()
+    first_monitor = balancer._monitor_task
+    await balancer.start()
+
+    assert balancer._monitor_task is first_monitor
+    assert first_monitor is not None and not first_monitor.done()
+
+    await balancer.stop()
+    assert first_monitor.done()
+    assert balancer._monitor_task is None
+
+    await balancer.stop()
+    await balancer.start()
+    second_monitor = balancer._monitor_task
+    assert second_monitor is not None and second_monitor is not first_monitor
+    await balancer.stop()
+
+
+@pytest.mark.asyncio
+async def test_concurrent_start_and_stop_leave_no_monitor_running(
+    balancer: RoundRobinLoadBalancer,
+) -> None:
+    await asyncio.gather(balancer.start(), balancer.start())
+    monitor = balancer._monitor_task
+    assert monitor is not None and not monitor.done()
+
+    await asyncio.gather(balancer.stop(), balancer.stop())
+
+    assert balancer._monitor_task is None
+    assert monitor.done()
