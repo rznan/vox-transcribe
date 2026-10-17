@@ -1,17 +1,17 @@
 import asyncio
-import pytest
-
 from datetime import datetime
 
-from src.domain.entities import Batch, Task
-from src.domain.value_objects.enums import TaskStatus
+import pytest
+
 from src.application.scheduler.data_strutures import (
     BatchCircularList,
-    QueueMismatchError,
-    QueueEmptyError,
     BatchNotFoundError,
+    QueueEmptyError,
+    QueueMismatchError,
     TaskQueue,
 )
+from src.domain.entities import Batch, Task
+from src.domain.value_objects.enums import TaskStatus
 
 
 @pytest.fixture

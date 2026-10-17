@@ -1,15 +1,14 @@
-import re
-import uuid
 import functools
 import logging
-from typing import Callable, Any
+import re
+import uuid
+from typing import Any, Callable
 
 import grpc
 
 import src.transport.grpc.mappers as grpc_mappers
-from src.domain.interfaces.services import TaskService, WorkerService
 from src.domain.entities import Batch, Task
-
+from src.domain.interfaces.services import TaskService, WorkerService
 from src.transport.grpc.generated import (
     core_worker_internal_communication_pb2 as cw_pb2,
 )
@@ -21,14 +20,22 @@ from src.transport.grpc.generated import task_service_pb2_grpc as task_pb2_grpc
 
 logger = logging.getLogger(__name__)
 
+
 def handle_grpc_errors(action_description: str) -> Callable:
     """
     Decorador para centralizar o tratamento de exceções nos métodos gRPC,
     mapeando exceções do Python para os status do gRPC apropriados.
     """
+
     def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
-        async def wrapper(self: Any, request: Any, context: grpc.aio.ServicerContext, *args: Any, **kwargs: Any) -> Any:
+        async def wrapper(
+            self: Any,
+            request: Any,
+            context: grpc.aio.ServicerContext,
+            *args: Any,
+            **kwargs: Any,
+        ) -> Any:
             try:
                 return await func(self, request, context, *args, **kwargs)
             except PermissionError as e:
@@ -38,12 +45,16 @@ def handle_grpc_errors(action_description: str) -> Callable:
             except LookupError as e:
                 await context.abort(grpc.StatusCode.NOT_FOUND, str(e))
             except Exception as e:
-                logger.error(f"Erro interno ao {action_description}: {e}", exc_info=True)
+                logger.error(
+                    f"Erro interno ao {action_description}: {e}", exc_info=True
+                )
                 await context.abort(
                     grpc.StatusCode.INTERNAL,
                     f"Erro interno ao {action_description}.",
                 )
+
         return wrapper
+
     return decorator
 
 
@@ -76,7 +87,9 @@ class MasterNodeServiceImpl(cw_pb2_grpc.MasterNodeServiceServicer):
     ) -> cw_pb2.WorkerEntryResponseProto:
         worker = grpc_mappers.worker_entry_request_to_domain(request)
         result = await self.worker_service.register_worker(worker)
-        return grpc_mappers.connection_status_to_proto(result, worker.id, self.master_id)
+        return grpc_mappers.connection_status_to_proto(
+            result, worker.id, self.master_id
+        )
 
     @handle_grpc_errors("processar o sinal de vida do worker")
     async def SendHeartbeat(
@@ -101,6 +114,7 @@ class MasterNodeServiceImpl(cw_pb2_grpc.MasterNodeServiceServicer):
 
         result = await self.worker_service.shutdown_worker(worker_id)
         return grpc_mappers.shutdown_response_to_proto(result)
+
 
 class TaskGrpcServiceImpl(task_pb2_grpc.TaskGrpcServiceServicer):
     """
@@ -129,7 +143,6 @@ class TaskGrpcServiceImpl(task_pb2_grpc.TaskGrpcServiceServicer):
         requested_batch = grpc_mappers.submit_batch_request_to_domain(request)
         resulting_batch = await self.task_service.create_batch(requested_batch)
         return grpc_mappers.batch_domain_to_submit_response(resulting_batch)
-
 
     @handle_grpc_errors("buscar o batch")
     async def GetBatch(

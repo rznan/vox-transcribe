@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 from src.application.repository_factory import RepositoryFactory
@@ -23,7 +22,9 @@ class TaskServiceImpl(TaskService):
     def __init__(
         self,
         repository_factory: RepositoryFactory,
-        scheduler: BatchCircularList | None = None,    #TODO: update to the proper mechanism when the scheduler implementation gets ready
+        scheduler: (
+            BatchCircularList | None
+        ) = None,  # TODO: update to the proper mechanism when the scheduler implementation gets ready
     ) -> None:
         self.repository_factory = repository_factory
         self.scheduler = scheduler
@@ -49,9 +50,7 @@ class TaskServiceImpl(TaskService):
                 batches = []
 
                 for summary in batch_summaries:
-                    batch = await repositories.batches.get_with_tasks(
-                        summary.id
-                    )
+                    batch = await repositories.batches.get_with_tasks(summary.id)
 
                     if batch is not None:
                         batches.append(batch)
@@ -76,9 +75,7 @@ class TaskServiceImpl(TaskService):
             created_batch = await repositories.batches.add(new_batch)
 
             persisted_batch = (
-                await repositories.batches.get_with_tasks(
-                    created_batch.id
-                )
+                await repositories.batches.get_with_tasks(created_batch.id)
                 or created_batch
             )
 
@@ -100,9 +97,7 @@ class TaskServiceImpl(TaskService):
             deleted = await repositories.batches.delete(batch_id)
 
             if not deleted:
-                raise LookupError(
-                    f"Batch {batch_id} não encontrado."
-                )
+                raise LookupError(f"Batch {batch_id} não encontrado.")
 
         self._remove_from_scheduler(batch_id)
         self._batches.pop(batch_id, None)
@@ -131,9 +126,7 @@ class TaskServiceImpl(TaskService):
             return batch
 
         async with self.repository_factory() as repositories:
-            batch = await repositories.batches.get_with_tasks(
-                batch_id
-            )
+            batch = await repositories.batches.get_with_tasks(batch_id)
 
         if batch is not None:
             self._remember_batch(batch)
@@ -155,9 +148,7 @@ class TaskServiceImpl(TaskService):
             batches = []
 
             for summary in summaries:
-                batch = await repositories.batches.get_with_tasks(
-                    summary.id
-                )
+                batch = await repositories.batches.get_with_tasks(summary.id)
 
                 if batch is not None:
                     batches.append(batch)
@@ -191,9 +182,7 @@ class TaskServiceImpl(TaskService):
     def _validate_new_batch(self, batch: Batch) -> None:
         """Reject empty batches and tasks in terminal states."""
         if not batch.tasks:
-            raise ValueError(
-                "O batch precisa conter ao menos uma tarefa."
-            )
+            raise ValueError("O batch precisa conter ao menos uma tarefa.")
 
         for task in batch.tasks:
             if task.status in self.TERMINAL_STATUSES:
@@ -206,9 +195,7 @@ class TaskServiceImpl(TaskService):
         batch = await self.get_batch(batch_id)
 
         if batch is None:
-            raise LookupError(
-                f"Batch {batch_id} não encontrado."
-            )
+            raise LookupError(f"Batch {batch_id} não encontrado.")
 
         return batch
 
@@ -246,11 +233,7 @@ class TaskServiceImpl(TaskService):
 
     def _enqueue_pending_tasks(self, batch: Batch) -> None:
         """Schedule only unfinished tasks from a restored batch."""
-        pending_tasks = [
-            task
-            for task in batch.tasks
-            if not task.is_finished()
-        ]
+        pending_tasks = [task for task in batch.tasks if not task.is_finished()]
 
         if not pending_tasks or self.scheduler is None:
             return
@@ -272,4 +255,3 @@ class TaskServiceImpl(TaskService):
             self.scheduler.remove(batch_id)
         except BatchNotFoundError:
             pass
-

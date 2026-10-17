@@ -1,15 +1,18 @@
 import uuid
+
 import pytest
 
 from src.domain.entities import Worker
-from src.domain.value_objects.enums import WorkerRuntime, WorkerStatus
 from src.domain.interfaces.services import WorkerService
-from src.transport.grpc.generated import core_worker_internal_communication_pb2 as cw_pb2
+from src.domain.value_objects.enums import WorkerRuntime, WorkerStatus
+from src.transport.grpc.generated import (
+    core_worker_internal_communication_pb2 as cw_pb2,
+)
 from src.transport.grpc.mappers import (
-    worker_entry_request_to_domain,
     connection_status_to_proto,
     heartbeat_response_to_proto,
     shutdown_response_to_proto,
+    worker_entry_request_to_domain,
 )
 
 

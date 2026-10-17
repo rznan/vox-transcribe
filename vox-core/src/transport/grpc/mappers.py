@@ -1,16 +1,25 @@
 import json
 import logging
 from datetime import datetime
-from uuid import UUID
 from typing import List
+from uuid import UUID
 
 from google.protobuf.timestamp_pb2 import Timestamp
 
-from src.domain.value_objects.enums import WorkerRuntime, WorkerStatus
-from src.domain.entities import Batch, Task, TaskAttempt, TaskAttemptStatus, TaskStatus, Worker
-from src.transport.grpc.generated import task_service_pb2 as task_pb2
-from src.transport.grpc.generated import core_worker_internal_communication_pb2 as cw_pb2
+from src.domain.entities import (
+    Batch,
+    Task,
+    TaskAttempt,
+    TaskAttemptStatus,
+    TaskStatus,
+    Worker,
+)
 from src.domain.interfaces.services import WorkerService
+from src.domain.value_objects.enums import WorkerRuntime, WorkerStatus
+from src.transport.grpc.generated import (
+    core_worker_internal_communication_pb2 as cw_pb2,
+)
+from src.transport.grpc.generated import task_service_pb2 as task_pb2
 
 logger = logging.getLogger(__name__)
 
@@ -262,6 +271,7 @@ def connection_status_to_proto(
         master_id=str(master_id),
     )
 
+
 def heartbeat_response_to_proto(
     status: WorkerService.HeartbeatResponseEnum,
 ) -> cw_pb2.HeartbeatResponseProto:
@@ -274,9 +284,9 @@ def heartbeat_response_to_proto(
 
     return cw_pb2.HeartbeatResponseProto(response=proto_status)
 
+
 def shutdown_response_to_proto(success: bool) -> cw_pb2.WorkerShutdownResponseProto:
     """
     Transforma o booleano de sucesso da operação na resposta gRPC.
     """
     return cw_pb2.WorkerShutdownResponseProto(success=success)
-

@@ -1,14 +1,12 @@
-from uuid import uuid4
 from unittest.mock import AsyncMock, MagicMock, create_autospec
+from uuid import uuid4
 
 import grpc
 import pytest
 
 from src.domain.interfaces.services import WorkerService
 from src.domain.value_objects.enums import WorkerRuntime, WorkerStatus
-from src.transport.grpc.generated import (
-    core_worker_internal_communication_pb2 as pb2,
-)
+from src.transport.grpc.generated import core_worker_internal_communication_pb2 as pb2
 from src.transport.grpc.services import MasterNodeServiceImpl
 
 
@@ -74,7 +72,9 @@ class TestMasterNodeServiceImpl:
         assert registered_worker.languages_supported == ["en", "pt"]
 
     @pytest.mark.asyncio
-    async def test_register_worker_invalid_uuid(self, servicer, mock_worker_service, mock_context):
+    async def test_register_worker_invalid_uuid(
+        self, servicer, mock_worker_service, mock_context
+    ):
         request = pb2.WorkerEntryRequestProto(id="not-a-uuid")
 
         with pytest.raises(MockRpcError):

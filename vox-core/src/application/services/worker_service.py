@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -79,10 +78,7 @@ class WorkerServiceImpl(WorkerService):
         worker = self._workers.get(worker_id)
 
         if worker is None:
-            return (
-                self.HeartbeatResponseEnum
-                .HEARTBEAT_RESPONSE_NOT_REGISTERED
-            )
+            return self.HeartbeatResponseEnum.HEARTBEAT_RESPONSE_NOT_REGISTERED
 
         worker.heartbeat = datetime.now(timezone.utc)
 
@@ -138,4 +134,3 @@ class WorkerServiceImpl(WorkerService):
             self.load_balancer.unregister(worker_id)
         except WorkerIdNotRegisteredError:
             pass
-

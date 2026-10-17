@@ -1,13 +1,20 @@
-import pytest
-import grpc
 from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
+import grpc
+import pytest
+
 from src.domain.entities import Task, TaskAttempt, TaskAttemptStatus, Worker
-from src.domain.value_objects.enums import TaskAttemptStatus, TaskStatus
-from src.domain.value_objects.enums import WorkerRuntime, WorkerStatus
+from src.domain.value_objects.enums import (
+    TaskAttemptStatus,
+    TaskStatus,
+    WorkerRuntime,
+    WorkerStatus,
+)
+from src.transport.grpc.generated import (
+    core_worker_internal_communication_pb2 as cw_pb2,
+)
 from src.transport.grpc.worker_client import GrpcWorkerClient
-from src.transport.grpc.generated import core_worker_internal_communication_pb2 as cw_pb2
 
 
 @pytest.fixture

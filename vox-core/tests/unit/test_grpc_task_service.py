@@ -1,16 +1,15 @@
+from datetime import datetime, timezone
+from unittest.mock import AsyncMock, MagicMock, create_autospec
 from uuid import uuid4
 
 import grpc
 import pytest
 
-from unittest.mock import AsyncMock, create_autospec, MagicMock
-from datetime import datetime, timezone
-
-from src.domain.value_objects.enums import TaskAttemptStatus, TaskStatus
+from src.domain.entities import Batch, Task, TaskAttempt
 from src.domain.interfaces.services import TaskService
-from src.transport.grpc.services import TaskGrpcServiceImpl
+from src.domain.value_objects.enums import TaskAttemptStatus, TaskStatus
 from src.transport.grpc.generated import task_service_pb2 as pb2
-from src.domain.entities import Task, TaskAttempt, Batch
+from src.transport.grpc.services import TaskGrpcServiceImpl
 
 
 @pytest.fixture

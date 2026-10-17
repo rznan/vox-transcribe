@@ -1,13 +1,14 @@
-import pytest
 import asyncio
 from uuid import uuid4
 
-from src.domain.entities import Worker
-from src.domain.value_objects.enums import WorkerRuntime, WorkerStatus
+import pytest
+
 from src.application.scheduler.load_balancer import (
     RoundRobinLoadBalancer,
     WorkerIdNotRegisteredError,
 )
+from src.domain.entities import Worker
+from src.domain.value_objects.enums import WorkerRuntime, WorkerStatus
 
 
 @pytest.fixture
